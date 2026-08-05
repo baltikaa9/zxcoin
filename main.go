@@ -43,13 +43,13 @@ func main() {
 
 	blockchain := Blockchain{}
 
-	err := blockchain.AddBlock(block0, &utxoDB)
+	err := blockchain.AddBlock(block0, utxoDB)
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
 	}
 
-	err = blockchain.AddBlock(block1, &utxoDB)
+	err = blockchain.AddBlock(block1, utxoDB)
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
