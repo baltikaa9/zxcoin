@@ -8,6 +8,7 @@ import (
 func main() {
 	utxoDB := UTXODB{
 		UTXOKey{"123", 0}: TxOutput{5, "1"},
+		UTXOKey{"124", 0}: TxOutput{5, "2"},
 	}
 
 	block0 := Block{
@@ -21,11 +22,12 @@ func main() {
 	}
 
 	input := TxInput{"123", 0, "123"}
+	input2 := TxInput{"124", 0, "123"}
 	output1 := TxOutput{5, "1"}
 	output2 := TxOutput{5, "2"}
 
 	t1 := NewTransaction([]TxInput{input}, []TxOutput{output1})
-	t2 := NewTransaction([]TxInput{input}, []TxOutput{output2})
+	t2 := NewTransaction([]TxInput{input2}, []TxOutput{output2})
 
 	block1 := NewBlock(
 		block0,
@@ -41,13 +43,13 @@ func main() {
 
 	blockchain := Blockchain{}
 
-	err := blockchain.AddBlock(block0, utxoDB)
+	err := blockchain.AddBlock(block0, &utxoDB)
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
 	}
 
-	err = blockchain.AddBlock(block1, utxoDB)
+	err = blockchain.AddBlock(block1, &utxoDB)
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
