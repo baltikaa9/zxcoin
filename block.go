@@ -1,38 +1,50 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
-	"strconv"
+	"encoding/binary"
 	"time"
 )
 
 type BlockHeader struct {
-	PrevHash  string
-	Nonce     int
-	RootHash  string
+	PrevHash  [32]byte
+	Nonce     uint64
+	RootHash  [32]byte
 	Timestamp uint32
 }
 
 type Block struct {
 	Header       BlockHeader
 	Transactions []Transaction
+	Difficulty   int
 }
 
-func NewBlock(prevBlock Block, nonce int, transactions []Transaction) Block {
-	prevData := prevBlock.Header.PrevHash + strconv.Itoa(prevBlock.Header.Nonce) + prevBlock.Header.RootHash + strconv.Itoa(int(prevBlock.Header.Timestamp))
-	prevHash := sha256.Sum256([]byte(prevData))
+func (bh BlockHeader) Hash() [32]byte {
+	var buf bytes.Buffer
 
-	header := BlockHeader{
-		hex.EncodeToString(prevHash[:]),
-		nonce,
-		getRootHash(transactions),
-		uint32(time.Now().Unix()),
+	buf.Write(bh.PrevHash[:])
+	buf.Write(bh.RootHash[:])
+
+	binary.Write(&buf, binary.BigEndian, bh.Nonce)
+	binary.Write(&buf, binary.BigEndian, bh.Timestamp)
+
+	return sha256.Sum256(buf.Bytes())
+}
+
+func NewBlock(prevBlock Block, transactions []Transaction) Block {
+	return Block{
+		BlockHeader{
+			prevBlock.Header.Hash(),
+			0,
+			getRootHash(transactions),
+			uint32(time.Now().Unix()),
+		},
+		transactions,
+		0,
 	}
-
-	return Block{header, transactions}
 }
 
-func getRootHash(transactions []Transaction) string {
-	return ""
+func getRootHash(transactions []Transaction) [32]byte {
+	return sha256.Sum256([]byte{1, 2, 3})
 }

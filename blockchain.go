@@ -1,14 +1,20 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 )
 
 type Blockchain struct {
-	Blocks []Block
+	Blocks            []Block
+	CurrentDifficulty int
 }
 
 func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
+	if block.Header.Nonce == 0 {
+		return errors.New("Nonce не найден")
+	}
+
 	for _, transaction := range block.Transactions {
 		for _, input := range transaction.Inputs {
 			key := UTXOKey{input.TxID, input.OutIndex}

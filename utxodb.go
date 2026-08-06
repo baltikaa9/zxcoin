@@ -1,7 +1,7 @@
 package main
 
 type UTXOKey struct {
-	TxID     string
+	TxID     [32]byte
 	OutIndex int
 }
 

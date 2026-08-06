@@ -8,14 +8,13 @@ import (
 )
 
 type TxInput struct {
-	TxID      []byte
+	TxID      [32]byte
 	OutIndex  int
-	PublicKey *ecdsa.PublicKey
-	Signature []byte
+	Signature Signature
 }
 
 type TxOutput struct {
-	Amount    int
+	Amount int
 	PublicKey *ecdsa.PublicKey
 }
 
@@ -25,29 +24,36 @@ type Transaction struct {
 }
 
 func NewTransaction(inputs []TxInput, outputs []TxOutput) Transaction {
-	t := Transaction{inputs, outputs}
-	return t
+	return Transaction{inputs, outputs}
 }
 
-func (t Transaction) Hash() []byte {
-	for i := range t.Inputs {
-		t.Inputs[i].Signature = nil
+func (t Transaction) Hash() [32]byte {
+	tmp := t
+
+	tmp.Inputs = make([]TxInput, len(t.Inputs))
+	copy(tmp.Inputs, t.Inputs)
+
+	for i := range tmp.Inputs {
+		tmp.Inputs[i].Signature = Signature{}
 	}
 
-	data := fmt.Sprintf("%v", t)
+	data := fmt.Sprintf("%v", tmp)
 	hash := sha256.Sum256([]byte(data))
 
-	return hash[:]
+	return hash
 }
 
-func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, hash []byte) error {
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, hash [32]byte) error {
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
 	if err != nil {
 		return err
 	}
 
-	sign := append(r.Bytes(), s.Bytes()...)
-	in.Signature = sign
+	in.Signature = Signature{r, s}
 
 	return nil
+}
+
+func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
+	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
 }
