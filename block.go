@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"time"
 )
 
 type BlockHeader struct {
@@ -32,19 +31,34 @@ func (bh BlockHeader) Hash() [32]byte {
 	return sha256.Sum256(buf.Bytes())
 }
 
-func NewBlock(prevBlock Block, transactions []Transaction) Block {
-	return Block{
-		BlockHeader{
-			prevBlock.Header.Hash(),
-			0,
-			getRootHash(transactions),
-			uint32(time.Now().Unix()),
-		},
-		transactions,
-		0,
+func (b *Block) Mine() {
+	for {
+		hash := b.Header.Hash()
+
+		valid := true
+
+		for i := range b.Difficulty {
+			if hash[i] != 0 {
+				valid = false
+				break
+			}
+		}
+
+		if valid {
+			return
+		}
+		
+		b.Header.Nonce++
 	}
 }
 
-func getRootHash(transactions []Transaction) [32]byte {
-	return sha256.Sum256([]byte{1, 2, 3})
+func (b *Block) calculateRootHash() {
+	var data []byte
+
+	for _, tx := range b.Transactions {
+		hash := tx.Hash()
+		data = append(data, hash[:]...)
+	}
+	
+	b.Header.RootHash = sha256.Sum256(data)
 }

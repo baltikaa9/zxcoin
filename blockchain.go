@@ -3,11 +3,34 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 type Blockchain struct {
 	Blocks            []Block
 	CurrentDifficulty int
+}
+
+func (b *Blockchain) NewBlock(transactions []Transaction) Block {
+	prevHash := [32]byte{}
+	
+	if len(b.Blocks) > 0 {
+		prevHash = b.Blocks[len(b.Blocks)-1].Header.Hash()
+	}
+
+	block := Block{
+		BlockHeader{
+			PrevHash: prevHash,
+			Nonce: 0,
+			Timestamp: uint32(time.Now().Unix()),
+		},
+		transactions,
+		b.CurrentDifficulty,
+	}
+
+	block.calculateRootHash()
+
+	return block
 }
 
 func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
