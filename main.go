@@ -11,42 +11,46 @@ func main() {
 	myWallet := NewWallet()
 	otherWallet := NewWallet()
 
-	fmt.Printf("myWallet: %v, otherWallet: %v\n", myWallet, otherWallet)
+	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
 	utxoDB := UTXODB{
 		UTXOKey{[32]byte{}, 0}: TxOutput{5, myWallet.PublicKey},
+		UTXOKey{[32]byte{}, 1}: TxOutput{3, myWallet.PublicKey},
+		UTXOKey{[32]byte{}, 2}: TxOutput{1, myWallet.PublicKey},
+		UTXOKey{[32]byte{}, 3}: TxOutput{10, myWallet.PublicKey},
 	}
 
-	t := NewTransaction(
-		[]TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		[]TxOutput{{100, otherWallet.PublicKey}},
-	)
-
-	tHash := t.Hash()
-
-	for i := range t.Inputs {
-		t.Inputs[i].Sign(myWallet.PrivateKey, tHash)
-		// t.Inputs[i].Signature = Signature{big.NewInt(1), big.NewInt(2)}
-	}
-
-	block := NewBlock(Block{}, []Transaction{t})
-	block.Header.Nonce = 10
-
-	b := Blockchain{}
-	
-	fmt.Printf("%v\n", utxoDB)
-
-	err := b.AddBlock(block, utxoDB)
+	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
 
 	if err != nil {
 		panic(err)
 	}
 
+	if err1 != nil {
+		panic(err1)
+	}
+
+	block := NewBlock(Block{}, []Transaction{t})
+	block.Header.Nonce = 10
+
+	block1 := NewBlock(block, []Transaction{t1})
+	block1.Header.Nonce = 10
+
+	b := Blockchain{}
+
+	fmt.Printf("%v\n\n", utxoDB)
+
+	err = b.AddBlock(block, utxoDB)
+	err1 = b.AddBlock(block1, utxoDB)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err1 != nil {
+		panic(err1)
+	}
+
 	fmt.Printf("%v\n", utxoDB)
-
-	// fmt.Printf("%v\n", t.Inputs[0].Signature)
-
-	// oldOutput := t0.Outputs[t.Inputs[0].OutIndex]
-
-	// fmt.Printf("%v", t.Inputs[0].Verify(oldOutput.PublicKey, tHash))
 }

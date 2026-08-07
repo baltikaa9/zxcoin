@@ -16,10 +16,13 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 	}
 
 	for _, transaction := range block.Transactions {
+		inputAmount := 0
+		outputAmount := 0
+
 		for _, input := range transaction.Inputs {
 			key := UTXOKey{input.TxID, input.OutIndex}
 			utxo, exists := utxoDB[key]
-			
+
 			if !exists {
 				return fmt.Errorf("UTXO (%v, %v) не найден", input.TxID, input.OutIndex)
 			}
@@ -28,6 +31,23 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 				return fmt.Errorf("UTXO (%v, %v) не верная подпись", input.TxID, input.OutIndex)
 			}
 
+			inputAmount += utxo.Amount
+		}
+
+		for _, output := range transaction.Outputs {
+			outputAmount += output.Amount
+		}
+
+		if outputAmount > inputAmount {
+			return fmt.Errorf(
+				"недостаточно средств: входы %d, выходы %d",
+				inputAmount,
+				outputAmount,
+			)
+		} 
+
+		for _, input := range transaction.Inputs {
+			key := UTXOKey{input.TxID, input.OutIndex}
 			delete(utxoDB, key)
 		}
 
