@@ -3,88 +3,50 @@ package main
 import (
 	// "crypto/ecdsa"
 	"fmt"
+	// "math/big"
 	// "time"
 )
 
 func main() {
-	// utxoDB := UTXODB{
-	// 	UTXOKey{"123", 0}: TxOutput{5, "1"},
-	// 	UTXOKey{"124", 0}: TxOutput{5, "2"},
-	// }
+	myWallet := NewWallet()
+	otherWallet := NewWallet()
 
-	// block0 := Block{
-	// 	BlockHeader{
-	// 		"",
-	// 		0,
-	// 		"",
-	// 		uint32(time.Now().Unix()),
-	// 	},
-	// 	make([]Transaction, 0),
-	// }
+	fmt.Printf("myWallet: %v, otherWallet: %v\n", myWallet, otherWallet)
 
-	// input := TxInput{"123", 0, "123"}
-	// input2 := TxInput{"124", 0, "123"}
-	// output1 := TxOutput{5, "1"}
-	// output2 := TxOutput{5, "2"}
-
-	// t1 := NewTransaction([]TxInput{input}, []TxOutput{output1})
-	// t2 := NewTransaction([]TxInput{input2}, []TxOutput{output2})
-
-	// block1 := NewBlock(
-	// 	block0,
-	// 	10,
-	// 	[]Transaction{t1, t2},
-	// )
-
-	// block2 := NewBlock(
-	// 	block1,
-	// 	10,
-	// 	[]Transaction{t1, t2},
-	// )
-
-	// blockchain := Blockchain{}
-
-	// err := blockchain.AddBlock(block0, utxoDB)
-	// if err != nil {
-	// 	fmt.Printf("%v", err)
-	// 	return
-	// }
-
-	// err = blockchain.AddBlock(block1, utxoDB)
-	// if err != nil {
-	// 	fmt.Printf("%v", err)
-	// 	return
-	// }
-
-	// // err = blockchain.AddBlock(block2, utxoDB)
-	// // if err != nil {
-	// // 	fmt.Printf("%v", err)
-	// // 	return
-	// // }
-
-	// fmt.Printf("%v", blockchain)
-
-	wallet := NewWallet()
-
-	t0 := NewTransaction(
-		nil,
-		[]TxOutput{{5, wallet.PublicKey}},
-	)
+	utxoDB := UTXODB{
+		UTXOKey{[32]byte{}, 0}: TxOutput{5, myWallet.PublicKey},
+	}
 
 	t := NewTransaction(
-		[]TxInput{{t0.Hash(), 0, Signature{}}},
-		[]TxOutput{{5, wallet.PublicKey}},
+		[]TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		[]TxOutput{{100, otherWallet.PublicKey}},
 	)
 
 	tHash := t.Hash()
 
 	for i := range t.Inputs {
-		t.Inputs[i].Sign(wallet.PrivateKey, tHash)
+		t.Inputs[i].Sign(myWallet.PrivateKey, tHash)
+		// t.Inputs[i].Signature = Signature{big.NewInt(1), big.NewInt(2)}
 	}
 
-	fmt.Printf("%v\n", t.Inputs[0].Signature)
+	block := NewBlock(Block{}, []Transaction{t})
+	block.Header.Nonce = 10
 
-	oldOutput := t0.Outputs[t.Inputs[0].OutIndex]
+	b := Blockchain{}
 	
-	fmt.Printf("%v", t.Inputs[0].Verify(oldOutput.PublicKey, tHash))
+	fmt.Printf("%v\n", utxoDB)
+
+	err := b.AddBlock(block, utxoDB)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%v\n", utxoDB)
+
+	// fmt.Printf("%v\n", t.Inputs[0].Signature)
+
+	// oldOutput := t0.Outputs[t.Inputs[0].OutIndex]
+
+	// fmt.Printf("%v", t.Inputs[0].Verify(oldOutput.PublicKey, tHash))
 }
