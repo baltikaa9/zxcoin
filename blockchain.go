@@ -13,15 +13,15 @@ type Blockchain struct {
 
 func (b *Blockchain) NewBlock(transactions []Transaction) Block {
 	prevHash := [32]byte{}
-	
+
 	if len(b.Blocks) > 0 {
 		prevHash = b.Blocks[len(b.Blocks)-1].Header.Hash()
 	}
 
 	block := Block{
 		BlockHeader{
-			PrevHash: prevHash,
-			Nonce: 0,
+			PrevHash:  prevHash,
+			Nonce:     0,
 			Timestamp: uint32(time.Now().Unix()),
 		},
 		transactions,
@@ -36,6 +36,14 @@ func (b *Blockchain) NewBlock(transactions []Transaction) Block {
 func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 	if block.Header.Nonce == 0 {
 		return errors.New("nonce не найден")
+	}
+
+	blockHash := block.Header.Hash()
+
+	for i := range block.Difficulty {
+		if blockHash[i] != 0 {
+			return fmt.Errorf("неверный nonce")
+		}
 	}
 
 	for _, transaction := range block.Transactions {
@@ -67,7 +75,7 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 				inputAmount,
 				outputAmount,
 			)
-		} 
+		}
 
 		for _, input := range transaction.Inputs {
 			key := UTXOKey{input.TxID, input.OutIndex}

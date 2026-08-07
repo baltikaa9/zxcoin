@@ -18,19 +18,20 @@ func main() {
 	}
 
 	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
-	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	// t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
 
 	if err != nil {
 		panic(err)
 	}
 	
-	if err1 != nil {
-		panic(err1)
-	}
+	// if err1 != nil {
+		// panic(err1)
+	// }
+	fmt.Printf("\n%v\n\n", utxoDB)
 	
 	b := Blockchain{CurrentDifficulty: 2}
 
-	block := b.NewBlock([]Transaction{t, t1})
+	block := b.NewBlock([]Transaction{t})
 	// block.Header.Nonce = 10
 	block.Mine()
 
@@ -43,7 +44,6 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("\n%v\n\n", utxoDB)
 	
 	
 
