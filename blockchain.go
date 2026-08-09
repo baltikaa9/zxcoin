@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"time"
 )
@@ -34,16 +33,16 @@ func (b *Blockchain) NewBlock(transactions []Transaction) Block {
 }
 
 func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
-	if block.Header.Nonce == 0 {
-		return errors.New("nonce не найден")
-	}
-
 	blockHash := block.Header.Hash()
 
 	for i := range block.Difficulty {
 		if blockHash[i] != 0 {
 			return fmt.Errorf("неверный nonce")
 		}
+	}
+
+	if len(b.Blocks) > 0 && block.Header.PrevHash != b.Blocks[len(b.Blocks)-1].Header.Hash() {
+		return fmt.Errorf("неверный предыдущий блок")
 	}
 
 	for _, transaction := range block.Transactions {
