@@ -35,17 +35,20 @@ func NewWallet() Wallet {
 func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB UTXODB) (Transaction, error) {
 	var inputs []TxInput
 	var outputs []TxOutput
+	var reserved []UTXOKey
 
 	total := 0
 
-	for key, output := range utxoDB {
-		if output.PublicKey.Equal(w.PublicKey) {
+	for key, entry := range utxoDB {
+		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved {
 			inputs = append(inputs, TxInput{
 				TxID:     key.TxID,
 				OutIndex: key.OutIndex,
 			})
 
-			total += output.Amount
+			reserved = append(reserved, key)
+
+			total += entry.Output.Amount
 
 			if total >= amount {
 				break
@@ -55,6 +58,12 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB UTXODB
 
 	if total < amount {
 		return Transaction{}, fmt.Errorf("недостаточно средств %v/%v", total, amount)
+	}
+
+	for _, key := range reserved {
+		item := utxoDB[key]
+		item.Reserved = true
+		utxoDB[key] = item
 	}
 
 	outputs = append(outputs, TxOutput{amount, to})

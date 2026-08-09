@@ -5,4 +5,9 @@ type UTXOKey struct {
 	OutIndex int
 }
 
-type UTXODB map[UTXOKey]TxOutput
+type UTXOEntry struct {
+	Output   TxOutput
+	Reserved bool
+}
+
+type UTXODB map[UTXOKey]UTXOEntry

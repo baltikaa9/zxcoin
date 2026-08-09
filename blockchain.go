@@ -58,11 +58,11 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 				return fmt.Errorf("UTXO (%v, %v) не найден", input.TxID, input.OutIndex)
 			}
 
-			if (input.Signature == Signature{}) || (!input.Verify(utxo.PublicKey, transaction.Hash())) {
+			if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, transaction.Hash())) {
 				return fmt.Errorf("UTXO (%v, %v) не верная подпись", input.TxID, input.OutIndex)
 			}
 
-			inputAmount += utxo.Amount
+			inputAmount += utxo.Output.Amount
 		}
 
 		for _, output := range transaction.Outputs {
@@ -83,7 +83,7 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 		}
 
 		for i, output := range transaction.Outputs {
-			utxoDB[UTXOKey{transaction.Hash(), i}] = output
+			utxoDB[UTXOKey{transaction.Hash(), i}] = UTXOEntry{output, false}
 		}
 	}
 
