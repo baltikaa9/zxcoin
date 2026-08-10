@@ -6,12 +6,16 @@ import (
 )
 
 type Node struct {
-	Hash [32]byte
+	Hash  [32]byte
 	Left  *Node
 	Right *Node
 }
 
 func BuildMerkleTree(transactions []Transaction) Node {
+	if len(transactions) == 0 {
+		return Node{}
+	}
+
 	var leafs []Node
 
 	for i := range transactions {
