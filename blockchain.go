@@ -35,7 +35,7 @@ func (b *Blockchain) NewBlock(transactions []Transaction) Block {
 func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 	blockHash := block.Header.Hash()
 
-	for i := range block.Difficulty {
+	for i := range b.CurrentDifficulty {
 		if blockHash[i] != 0 {
 			return fmt.Errorf("неверный nonce")
 		}
