@@ -47,18 +47,12 @@ func (b *Block) Mine() {
 		if valid {
 			return
 		}
-		
+
 		b.Header.Nonce++
 	}
 }
 
 func (b *Block) calculateRootHash() {
-	var data []byte
-
-	for _, tx := range b.Transactions {
-		hash := tx.Hash()
-		data = append(data, hash[:]...)
-	}
-	
-	b.Header.RootHash = sha256.Sum256(data)
+	merkleTree := BuildMerkleTree(b.Transactions)
+	b.Header.RootHash = merkleTree.Hash
 }

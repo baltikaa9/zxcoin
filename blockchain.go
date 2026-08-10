@@ -45,6 +45,10 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 		return fmt.Errorf("неверный предыдущий блок")
 	}
 
+	if block.Header.RootHash != BuildMerkleTree(block.Transactions).Hash {
+		return fmt.Errorf("неверный хеш корня дерева Меркла")
+	}
+
 	for _, transaction := range block.Transactions {
 		inputAmount := 0
 		outputAmount := 0
