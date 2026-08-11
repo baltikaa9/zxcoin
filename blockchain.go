@@ -9,11 +9,12 @@ import (
 type Blockchain struct {
 	Blocks            []Block
 	CurrentDifficulty int
+	CurrentAward      int
 }
 
 func (b *Blockchain) NewBlock(transactions []Transaction, creator *ecdsa.PublicKey) Block {
-	coinbaseTransaction := Transaction{Outputs: []TxOutput{{100, creator}}}
-	
+	coinbaseTransaction := Transaction{Outputs: []TxOutput{{b.CurrentAward, creator}}}
+
 	prevHash := [32]byte{}
 
 	if len(b.Blocks) > 0 {
@@ -26,7 +27,7 @@ func (b *Blockchain) NewBlock(transactions []Transaction, creator *ecdsa.PublicK
 			Nonce:     0,
 			Timestamp: uint32(time.Now().Unix()),
 		},
-		append([]Transaction{coinbaseTransaction}, transactions...),
+		append(transactions, coinbaseTransaction),
 		b.CurrentDifficulty,
 	}
 
@@ -53,12 +54,18 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 	}
 
 	spentInThisBlock := make(map[UTXOKey]bool)
+	foundCoinbase := false
 
-	for i, transaction := range block.Transactions {
-		if i == 0 {
+	for _, transaction := range block.Transactions {
+		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == b.CurrentAward {
+			if foundCoinbase {
+				return fmt.Errorf("больше одной coinbase-транзакции в блоке")
+			}
+
+			foundCoinbase = true
 			continue
 		}
-		
+
 		if err := transaction.Validate(utxoDB); err != nil {
 			return err
 		}

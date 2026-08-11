@@ -46,7 +46,7 @@ func main() {
 		panic(err)
 	}
 
-	b := Blockchain{CurrentDifficulty: 2}
+	b := Blockchain{CurrentDifficulty: 2, CurrentAward: 100}
 
 	txs := mempool.GetPending(3)
 
