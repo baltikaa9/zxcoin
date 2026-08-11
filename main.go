@@ -19,8 +19,8 @@ func main() {
 
 	// var txPool []Transaction
 
-	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
-	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
+	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
 	// t2, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t3, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t4, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)

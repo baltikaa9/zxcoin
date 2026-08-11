@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"time"
 )
@@ -10,7 +11,9 @@ type Blockchain struct {
 	CurrentDifficulty int
 }
 
-func (b *Blockchain) NewBlock(transactions []Transaction) Block {
+func (b *Blockchain) NewBlock(transactions []Transaction, creator *ecdsa.PublicKey) Block {
+	coinbaseTransaction := Transaction{Outputs: []TxOutput{{100, creator}}}
+	
 	prevHash := [32]byte{}
 
 	if len(b.Blocks) > 0 {
@@ -23,7 +26,7 @@ func (b *Blockchain) NewBlock(transactions []Transaction) Block {
 			Nonce:     0,
 			Timestamp: uint32(time.Now().Unix()),
 		},
-		transactions,
+		append([]Transaction{coinbaseTransaction}, transactions...),
 		b.CurrentDifficulty,
 	}
 
@@ -51,7 +54,11 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 
 	spentInThisBlock := make(map[UTXOKey]bool)
 
-	for _, transaction := range block.Transactions {
+	for i, transaction := range block.Transactions {
+		if i == 0 {
+			continue
+		}
+		
 		if err := transaction.Validate(utxoDB); err != nil {
 			return err
 		}
