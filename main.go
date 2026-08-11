@@ -17,15 +17,23 @@ func main() {
 		UTXOKey{[32]byte{}, 3}: UTXOEntry{TxOutput{10, myWallet.PublicKey}, false},
 	}
 
+	// var txPool []Transaction
+
 	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t2, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t3, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t4, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 
+	t2 := Transaction{[]TxInput{{[32]byte{}, 0, Signature{}}}, []TxOutput{{5, myWallet.PublicKey}}}
+
+	for i := range t2.Inputs {
+		t2.Inputs[i].Sign(myWallet.PrivateKey, t2.Hash())
+	}
+	
 	// rootHash := BuildMerkleTree([]Transaction{t, t1, t2, t3, t4})
 
-	// for left := rootHash.Left; node != nil; 
+	// for left := rootHash.Left; node != nil;
 	// fmt.Printf("roothash = %v\n", rootHash)
 	// PrintTree(&rootHash, 0)
 
@@ -36,13 +44,19 @@ func main() {
 	}
 
 	if err1 != nil {
-	panic(err1)
+		panic(err1)
 	}
 	fmt.Printf("было\n%v\n\n", utxoDB)
 
+	mempool := NewMempool()
+
+	mempool.Add(t, utxoDB)
+	mempool.Add(t1, utxoDB)
+	mempool.Add(t2, utxoDB)
+
 	b := Blockchain{CurrentDifficulty: 2}
 
-	block := b.NewBlock([]Transaction{t, t1})
+	block := b.NewBlock(mempool.GetPending(3))
 	// block.Header.Nonce = 10
 	block.Mine()
 

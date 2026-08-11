@@ -49,40 +49,27 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 		return fmt.Errorf("неверный хеш корня дерева Меркла")
 	}
 
+	spentInThisBlock := make(map[UTXOKey]bool)
+
 	for _, transaction := range block.Transactions {
-		inputAmount := 0
-		outputAmount := 0
-
-		for _, input := range transaction.Inputs {
-			key := UTXOKey{input.TxID, input.OutIndex}
-			utxo, exists := utxoDB[key]
-
-			if !exists {
-				return fmt.Errorf("UTXO (%v, %v) не найден", input.TxID, input.OutIndex)
-			}
-
-			if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, transaction.Hash())) {
-				return fmt.Errorf("UTXO (%v, %v) не верная подпись", input.TxID, input.OutIndex)
-			}
-
-			inputAmount += utxo.Output.Amount
-		}
-
-		for _, output := range transaction.Outputs {
-			outputAmount += output.Amount
-		}
-
-		if outputAmount > inputAmount {
-			return fmt.Errorf(
-				"недостаточно средств: входы %d, выходы %d",
-				inputAmount,
-				outputAmount,
-			)
+		if err := transaction.Validate(utxoDB); err != nil {
+			return err
 		}
 
 		for _, input := range transaction.Inputs {
 			key := UTXOKey{input.TxID, input.OutIndex}
-			delete(utxoDB, key)
+
+			if spentInThisBlock[key] {
+				return fmt.Errorf("UTXO (%v, %v) уже используется в данном блоке", input.TxID, input.OutIndex)
+			}
+
+			spentInThisBlock[key] = true
+		}
+	}
+
+	for _, transaction := range block.Transactions {
+		for _, input := range transaction.Inputs {
+			delete(utxoDB, UTXOKey{input.TxID, input.OutIndex})
 		}
 
 		for i, output := range transaction.Outputs {

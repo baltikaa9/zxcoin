@@ -14,7 +14,7 @@ type TxInput struct {
 }
 
 type TxOutput struct {
-	Amount int
+	Amount    int
 	PublicKey *ecdsa.PublicKey
 }
 
@@ -56,4 +56,38 @@ func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, hash [32]byte) error {
 
 func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
 	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
+}
+
+func (t Transaction) Validate(utxoDB UTXODB) error {
+	inputAmount := 0
+	outputAmount := 0
+
+	for _, input := range t.Inputs {
+		key := UTXOKey{input.TxID, input.OutIndex}
+		utxo, exists := utxoDB[key]
+
+		if !exists {
+			return fmt.Errorf("UTXO (%v, %v) не найден", input.TxID, input.OutIndex)
+		}
+
+		if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, t.Hash())) {
+			return fmt.Errorf("UTXO (%v, %v) не верная подпись", input.TxID, input.OutIndex)
+		}
+
+		inputAmount += utxo.Output.Amount
+	}
+
+	for _, output := range t.Outputs {
+		outputAmount += output.Amount
+	}
+
+	if outputAmount > inputAmount {
+		return fmt.Errorf(
+			"недостаточно средств: входы %d, выходы %d",
+			inputAmount,
+			outputAmount,
+		)
+	}
+
+	return nil
 }
