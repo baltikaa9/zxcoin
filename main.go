@@ -25,20 +25,6 @@ func main() {
 	// t3, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	// t4, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 
-	t2 := Transaction{[]TxInput{{[32]byte{}, 0, Signature{}}}, []TxOutput{{5, myWallet.PublicKey}}}
-
-	for i := range t2.Inputs {
-		t2.Inputs[i].Sign(myWallet.PrivateKey, t2.Hash())
-	}
-	
-	// rootHash := BuildMerkleTree([]Transaction{t, t1, t2, t3, t4})
-
-	// for left := rootHash.Left; node != nil;
-	// fmt.Printf("roothash = %v\n", rootHash)
-	// PrintTree(&rootHash, 0)
-
-	// return
-
 	if err != nil {
 		panic(err)
 	}
@@ -50,13 +36,21 @@ func main() {
 
 	mempool := NewMempool()
 
-	mempool.Add(t, utxoDB)
-	mempool.Add(t1, utxoDB)
-	mempool.Add(t2, utxoDB)
+	err = mempool.Add(t, utxoDB)
+	if err != nil {
+		panic(err)
+	}
+	
+	err = mempool.Add(t1, utxoDB)
+	if err != nil {
+		panic(err)
+	}
 
 	b := Blockchain{CurrentDifficulty: 2}
 
-	block := b.NewBlock(mempool.GetPending(3))
+	txs := mempool.GetPending(3)
+
+	block := b.NewBlock(txs, myWallet.PublicKey)
 	// block.Header.Nonce = 10
 	block.Mine()
 
@@ -67,6 +61,10 @@ func main() {
 
 	if err != nil {
 		panic(err)
+	}
+
+	for _, tx := range txs {
+		mempool.Remove(tx.Hash())
 	}
 
 	// block1 := b.NewBlock([]Transaction{t1})
