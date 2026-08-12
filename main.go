@@ -48,24 +48,26 @@ func main() {
 
 	b := Blockchain{CurrentDifficulty: 2, CurrentAward: 100}
 
-	txs := mempool.GetPending(3)
+	b.MineAndAddBlock(mempool, utxoDB, 3, myWallet.PublicKey)
 
-	block := b.NewBlock(txs, myWallet.PublicKey)
+	// txs := mempool.GetPending(3)
+
+	// block := b.NewBlock(txs, myWallet.PublicKey)
 	// block.Header.Nonce = 10
-	block.Mine()
+	// block.Mine()
 
 	// fmt.Printf("nonce = %v\n", block.Header.Nonce)
 	// fmt.Printf("root = %v\n", block.Header.RootHash)
 	// fmt.Printf("prev = %v\n", block.Header.PrevHash)
-	err = b.AddBlock(block, utxoDB)
+	// err = b.AddBlock(block, utxoDB)
 
-	if err != nil {
-		panic(err)
-	}
+	// if err != nil {
+		// panic(err)
+	// }
 
-	for _, tx := range txs {
-		mempool.Remove(tx.Hash())
-	}
+	// for _, tx := range txs {
+		// mempool.Remove(tx.Hash())
+	// }
 
 	// block1 := b.NewBlock([]Transaction{t1})
 	// block1.Header.Nonce = 10

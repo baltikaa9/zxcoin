@@ -95,3 +95,20 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 
 	return nil
 }
+
+func (b *Blockchain) MineAndAddBlock(mempool *Mempool, utxoDB UTXODB, limit int, creator *ecdsa.PublicKey) (Block, error) {
+	txs := mempool.GetPending(limit)
+
+	block := b.NewBlock(txs, creator)
+	block.Mine()
+
+	if err := b.AddBlock(block, utxoDB); err != nil {
+		return Block{}, err
+	}
+
+	for _, tx := range txs {
+		mempool.Remove(tx.Hash())
+	}
+
+	return block, nil
+}
