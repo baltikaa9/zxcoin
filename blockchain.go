@@ -74,7 +74,7 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 			key := UTXOKey{input.TxID, input.OutIndex}
 
 			if spentInThisBlock[key] {
-				return fmt.Errorf("UTXO (%v, %v) уже используется в данном блоке", input.TxID, input.OutIndex)
+				return &DoubleSpendError{input.TxID, input.OutIndex}
 			}
 
 			spentInThisBlock[key] = true
@@ -111,4 +111,13 @@ func (b *Blockchain) MineAndAddBlock(mempool *Mempool, utxoDB UTXODB, limit int,
 	}
 
 	return block, nil
+}
+
+type DoubleSpendError struct {
+	TxID     [32]byte
+	OutIndex int
+}
+
+func (e *DoubleSpendError) Error() string {
+	return fmt.Sprintf("UTXO (%v, %v) уже используется в данном блоке", e.TxID, e.OutIndex)
 }

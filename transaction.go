@@ -67,7 +67,7 @@ func (t Transaction) Validate(utxoDB UTXODB) error {
 		utxo, exists := utxoDB[key]
 
 		if !exists {
-			return fmt.Errorf("UTXO (%v, %v) не найден", input.TxID, input.OutIndex)
+			return &UTXONotFoundError{input.TxID, input.OutIndex}
 		}
 
 		if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, t.Hash())) {
@@ -90,4 +90,13 @@ func (t Transaction) Validate(utxoDB UTXODB) error {
 	}
 
 	return nil
+}
+
+type UTXONotFoundError struct {
+	TxID     [32]byte
+	OutIndex int
+}
+
+func (e *UTXONotFoundError) Error() string {
+	return fmt.Sprintf("UTXO (%v, %v) не найден", e.TxID, e.OutIndex)
 }
