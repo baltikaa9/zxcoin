@@ -70,3 +70,49 @@ func TestValidate_InvalidSignature(t *testing.T) {
 		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
 	}
 }
+
+func TestValidate_NotEnoughMoney(t *testing.T) {
+	wallet := NewWallet()
+	other := NewWallet()
+
+	utxoDB := UTXODB{
+		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, wallet.PublicKey}, false},
+	}
+	mempool := NewMempool()
+
+	tx := Transaction{
+		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Outputs: []TxOutput{{Amount: 10, PublicKey: other.PublicKey}},
+	}
+	tx.Inputs[0].Sign(wallet.PrivateKey, tx.Hash())
+
+	err := mempool.Add(tx, utxoDB)
+
+	var neErr *NotEnoughMoneyError
+
+	if !errors.As(err, &neErr) {
+		t.Fatalf("ожидалась NotEnoughMoney, получено: %v", err)
+	}
+}
+
+func TestValidate_Success(t *testing.T) {
+	wallet := NewWallet()
+	other := NewWallet()
+
+	utxoDB := UTXODB{
+		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, wallet.PublicKey}, false},
+	}
+	mempool := NewMempool()
+
+	tx := Transaction{
+		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Outputs: []TxOutput{{Amount: 5, PublicKey: other.PublicKey}},
+	}
+	tx.Inputs[0].Sign(wallet.PrivateKey, tx.Hash())
+
+	err := mempool.Add(tx, utxoDB)
+
+	if err != nil {
+		t.Fatalf("ошибка при валидации: %v", err)
+	}
+}

@@ -82,11 +82,7 @@ func (t Transaction) Validate(utxoDB UTXODB) error {
 	}
 
 	if outputAmount > inputAmount {
-		return fmt.Errorf(
-			"недостаточно средств: входы %d, выходы %d",
-			inputAmount,
-			outputAmount,
-		)
+		return &NotEnoughMoneyError{inputAmount, outputAmount}
 	}
 
 	return nil
@@ -108,4 +104,13 @@ type InvalidSignatureError struct {
 
 func (e *InvalidSignatureError) Error() string {
 	return fmt.Sprintf("UTXO (%v, %v) не верная подпись", e.TxID, e.OutIndex)
+}
+
+type NotEnoughMoneyError struct {
+	Input  int
+	Output int
+}
+
+func (e *NotEnoughMoneyError) Error() string {
+	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }
