@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	err = mempool.Add(t1, utxoDB)
 	if err != nil {
 		panic(err)
@@ -62,11 +62,11 @@ func main() {
 	// err = b.AddBlock(block, utxoDB)
 
 	// if err != nil {
-		// panic(err)
+	// panic(err)
 	// }
 
 	// for _, tx := range txs {
-		// mempool.Remove(tx.Hash())
+	// mempool.Remove(tx.Hash())
 	// }
 
 	// block1 := b.NewBlock([]Transaction{t1})
