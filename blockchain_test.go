@@ -234,8 +234,8 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 	block.Mine()
 	err := bc.AddBlock(block, utxoDB)
 
-	if _, ok := errors.AsType[*MoreOneCoinbaseError](err); ok {
-		t.Fatalf("несколько coinbase-транзакций")
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
 	}
 
 	if len(utxoDB) == 0 {
