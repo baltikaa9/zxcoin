@@ -41,16 +41,16 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 
 	for i := range b.CurrentDifficulty {
 		if blockHash[i] != 0 {
-			return fmt.Errorf("неверный nonce")
+			return &InvalidNonceError{blockHash, b.CurrentDifficulty}
 		}
 	}
 
 	if len(b.Blocks) > 0 && block.Header.PrevHash != b.Blocks[len(b.Blocks)-1].Header.Hash() {
-		return fmt.Errorf("неверный предыдущий блок")
+		return &InvalidPrevHashError{}
 	}
 
 	if block.Header.RootHash != BuildMerkleTree(block.Transactions).Hash {
-		return fmt.Errorf("неверный хеш корня дерева Меркла")
+		return &InvalidMerkleRootError{}
 	}
 
 	spentInThisBlock := make(map[UTXOKey]bool)
@@ -59,7 +59,7 @@ func (b *Blockchain) AddBlock(block Block, utxoDB UTXODB) error {
 	for _, transaction := range block.Transactions {
 		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == b.CurrentAward {
 			if foundCoinbase {
-				return fmt.Errorf("больше одной coinbase-транзакции в блоке")
+				return &MoreOneCoinbaseError{}
 			}
 
 			foundCoinbase = true
@@ -120,4 +120,31 @@ type DoubleSpendError struct {
 
 func (e *DoubleSpendError) Error() string {
 	return fmt.Sprintf("UTXO (%v, %v) уже используется в данном блоке", e.TxID, e.OutIndex)
+}
+
+type InvalidNonceError struct {
+	blockHash  [32]byte
+	difficulty int
+}
+
+func (e *InvalidNonceError) Error() string {
+	return fmt.Sprintf("неверный nonce. Сложность: %v, хеш: %v", e.difficulty, e.blockHash)
+}
+
+type InvalidPrevHashError struct {}
+
+func (e *InvalidPrevHashError) Error() string {
+	return "неверный предыдущий блок"
+}
+
+type InvalidMerkleRootError struct {}
+
+func (e *InvalidMerkleRootError) Error() string {
+	return "неверный хеш корня дерева Меркла"
+}
+
+type MoreOneCoinbaseError struct {}
+
+func (e *MoreOneCoinbaseError) Error() string {
+	return "больше одной coinbase-транзакции в блоке"
 }
