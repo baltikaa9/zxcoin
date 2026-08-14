@@ -39,9 +39,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 
 	err = mempool.Add(t2, utxoDB)
 
-	var nfErr *UTXONotFoundError
-
-	if !errors.As(err, &nfErr) {
+	if _, ok := errors.AsType[*UTXONotFoundError](err); !ok {
 		t.Fatalf("ожидалась UTXONotFoundError, получено: %v", err)
 	}
 }
@@ -64,9 +62,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 	err := mempool.Add(tx, utxoDB)
 
-	var isErr *InvalidSignatureError
-
-	if !errors.As(err, &isErr) {
+	if _, ok := errors.AsType[*InvalidSignatureError](err); !ok {
 		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
 	}
 }
@@ -88,9 +84,7 @@ func TestValidate_NotEnoughMoney(t *testing.T) {
 
 	err := mempool.Add(tx, utxoDB)
 
-	var neErr *NotEnoughMoneyError
-
-	if !errors.As(err, &neErr) {
+	if _, ok := errors.AsType[*NotEnoughMoneyError](err); !ok {
 		t.Fatalf("ожидалась NotEnoughMoney, получено: %v", err)
 	}
 }
