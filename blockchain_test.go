@@ -256,7 +256,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("некорректная сумма coinbase-транзакции в utxodb")
 	}
 
-	if utxo.Output.PublicKey != wallet.PublicKey {
+	if !utxo.Output.PublicKey.Equal(wallet.PublicKey) {
 		t.Fatalf("некорректный получатель coinbase-транзакции в utxodb")
 	}
 }
@@ -310,7 +310,7 @@ func TestAddBlock_Success(t *testing.T) {
 		t.Fatalf("некорректная сумма транзакции в utxodb")
 	}
 
-	if utxo.Output.PublicKey != other.PublicKey {
+	if !utxo.Output.PublicKey.Equal(other.PublicKey) {
 		t.Fatalf("некорректный получатель транзакции в utxodb")
 	}
 }
