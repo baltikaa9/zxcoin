@@ -1,9 +1,11 @@
-package main
+package block
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"zxcoin/merkle"
+	"zxcoin/transaction"
 )
 
 type BlockHeader struct {
@@ -15,7 +17,7 @@ type BlockHeader struct {
 
 type Block struct {
 	Header       BlockHeader
-	Transactions []Transaction
+	Transactions []transaction.Transaction
 	Difficulty   int
 }
 
@@ -52,7 +54,7 @@ func (b *Block) Mine() {
 	}
 }
 
-func (b *Block) calculateRootHash() {
-	merkleTree := BuildMerkleTree(b.Transactions)
+func (b *Block) CalculateRootHash() {
+	merkleTree := merkle.BuildMerkleTree(b.Transactions)
 	b.Header.RootHash = merkleTree.Hash
 }

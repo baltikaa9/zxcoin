@@ -1,10 +1,13 @@
-package main
+package transaction
 
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"math/big"
+	"zxcoin/coin"
+	"zxcoin/utxo"
 )
 
 type TxInput struct {
@@ -13,18 +16,14 @@ type TxInput struct {
 	Signature Signature
 }
 
-type TxOutput struct {
-	Amount    int
-	PublicKey *ecdsa.PublicKey
+type Signature struct {
+	R *big.Int
+	S *big.Int
 }
 
 type Transaction struct {
 	Inputs  []TxInput
-	Outputs []TxOutput
-}
-
-func NewTransaction(inputs []TxInput, outputs []TxOutput) Transaction {
-	return Transaction{inputs, outputs}
+	Outputs []coin.TxOutput
 }
 
 func (t Transaction) Hash() [32]byte {
@@ -58,12 +57,12 @@ func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
 	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
 }
 
-func (t Transaction) Validate(utxoDB UTXODB) error {
+func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 	inputAmount := 0
 	outputAmount := 0
 
 	for _, input := range t.Inputs {
-		key := UTXOKey{input.TxID, input.OutIndex}
+		key := utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}
 		utxo, exists := utxoDB[key]
 
 		if !exists {
@@ -86,31 +85,4 @@ func (t Transaction) Validate(utxoDB UTXODB) error {
 	}
 
 	return nil
-}
-
-type UTXONotFoundError struct {
-	TxID     [32]byte
-	OutIndex int
-}
-
-func (e *UTXONotFoundError) Error() string {
-	return fmt.Sprintf("UTXO (%v, %v) не найден", e.TxID, e.OutIndex)
-}
-
-type InvalidSignatureError struct {
-	TxID     [32]byte
-	OutIndex int
-}
-
-func (e *InvalidSignatureError) Error() string {
-	return fmt.Sprintf("UTXO (%v, %v) не верная подпись", e.TxID, e.OutIndex)
-}
-
-type NotEnoughMoneyError struct {
-	Input  int
-	Output int
-}
-
-func (e *NotEnoughMoneyError) Error() string {
-	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }

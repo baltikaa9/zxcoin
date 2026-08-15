@@ -1,27 +1,45 @@
-package main
+package blockchain
 
 import (
 	"errors"
 	"testing"
+	"zxcoin/block"
+	"zxcoin/coin"
+	"zxcoin/mempool"
+	"zxcoin/transaction"
+	"zxcoin/utxo"
+	"zxcoin/wallet"
 )
 
 func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
-	wallet := NewWallet()
-	other := NewWallet()
+	myWallet := wallet.NewWallet()
+	otherWallet := wallet.NewWallet()
 
-	utxoDB := UTXODB{
-		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, wallet.PublicKey}, false},
+	utxoDB := utxo.UTXODB{
+		utxo.UTXOKey{
+			TxID:     [32]byte{},
+			OutIndex: 0,
+		}: utxo.UTXOEntry{
+			Output: coin.TxOutput{
+				Amount:    5,
+				PublicKey: myWallet.PublicKey,
+			},
+			Reserved: false,
+		},
 	}
-	mempool := NewMempool()
+	mempool := mempool.NewMempool()
 
-	t1, err := wallet.CreateTransaction(other.PublicKey, 5, utxoDB)
+	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 5, utxoDB)
 
 	if err != nil {
 		t.Errorf("ошибка при создании честной транзакции: %v", err)
 	}
 
-	t2 := Transaction{[]TxInput{{TxID: [32]byte{}, OutIndex: 0}}, []TxOutput{{5, wallet.PublicKey}}}
-	t2.Inputs[0].Sign(wallet.PrivateKey, t2.Hash())
+	t2 := transaction.Transaction{
+		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: myWallet.PublicKey}},
+	}
+	t2.Inputs[0].Sign(myWallet.PrivateKey, t2.Hash())
 
 	err = mempool.Add(t1, utxoDB)
 
@@ -37,7 +55,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	_, err = bc.MineAndAddBlock(mempool, utxoDB, 2, wallet.PublicKey)
+	_, err = bc.MineAndAddBlock(mempool, utxoDB, 2, myWallet.PublicKey)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -45,28 +63,37 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 }
 
 func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
-	wallet := NewWallet()
-	other := NewWallet()
+	myWallet := wallet.NewWallet()
+	otherWallet := wallet.NewWallet()
 
-	utxoDB := UTXODB{
-		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, wallet.PublicKey}, false},
+	utxoDB := utxo.UTXODB{
+		utxo.UTXOKey{
+			TxID:     [32]byte{},
+			OutIndex: 0,
+		}: utxo.UTXOEntry{
+			Output: coin.TxOutput{
+				Amount:    5,
+				PublicKey: myWallet.PublicKey,
+			},
+			Reserved: false,
+		},
 	}
-	mempool := NewMempool()
+	mempool := mempool.NewMempool()
 
-	t1 := Transaction{
-		Inputs: []TxInput{
+	t1 := transaction.Transaction{
+		Inputs: []transaction.TxInput{
 			{TxID: [32]byte{}, OutIndex: 0},
 			{TxID: [32]byte{}, OutIndex: 0},
 		},
-		Outputs: []TxOutput{
-			{5, other.PublicKey},
+		Outputs: []coin.TxOutput{
+			{Amount: 5, PublicKey: otherWallet.PublicKey},
 		},
 	}
 
 	hash := t1.Hash()
 
 	for i := range t1.Inputs {
-		t1.Inputs[i].Sign(wallet.PrivateKey, hash)
+		t1.Inputs[i].Sign(myWallet.PrivateKey, hash)
 	}
 
 	err := mempool.Add(t1, utxoDB)
@@ -77,7 +104,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	_, err = bc.MineAndAddBlock(mempool, utxoDB, 1, wallet.PublicKey)
+	_, err = bc.MineAndAddBlock(mempool, utxoDB, 1, myWallet.PublicKey)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -85,23 +112,32 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 }
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
-	wallet := NewWallet()
-	other := NewWallet()
+	myWallet := wallet.NewWallet()
+	otherWallet := wallet.NewWallet()
 
-	utxoDB := UTXODB{
-		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, wallet.PublicKey}, false},
+	utxoDB := utxo.UTXODB{
+		utxo.UTXOKey{
+			TxID:     [32]byte{},
+			OutIndex: 0,
+		}: utxo.UTXOEntry{
+			Output: coin.TxOutput{
+				Amount:    5,
+				PublicKey: myWallet.PublicKey,
+			},
+			Reserved: false,
+		},
 	}
-	mempool := NewMempool()
+	mempool := mempool.NewMempool()
 
-	tx := Transaction{
-		Inputs: []TxInput{
+	tx := transaction.Transaction{
+		Inputs: []transaction.TxInput{
 			{TxID: [32]byte{}, OutIndex: 0},
 		},
-		Outputs: []TxOutput{
-			{5, other.PublicKey},
+		Outputs: []coin.TxOutput{
+			{Amount: 5, PublicKey: otherWallet.PublicKey},
 		},
 	}
-	tx.Inputs[0].Sign(wallet.PrivateKey, tx.Hash())
+	tx.Inputs[0].Sign(myWallet.PrivateKey, tx.Hash())
 
 	err := mempool.Add(tx, utxoDB)
 
@@ -110,7 +146,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 	}
 
 	bc := Blockchain{CurrentDifficulty: 2, CurrentAward: 1}
-	block := bc.NewBlock(mempool.GetPending(1), wallet.PublicKey)
+	block := bc.NewBlock(mempool.GetPending(1), myWallet.PublicKey)
 
 	err = bc.AddBlock(block, utxoDB)
 
@@ -120,12 +156,12 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 }
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
-	wallet := NewWallet()
+	myWallet := wallet.NewWallet()
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	utxoDB := UTXODB{}
+	utxoDB := utxo.UTXODB{}
 
-	genesisBlock := bc.NewBlock([]Transaction{}, wallet.PublicKey)
+	genesisBlock := bc.NewBlock([]transaction.Transaction{}, myWallet.PublicKey)
 	genesisBlock.Mine()
 
 	err := bc.AddBlock(genesisBlock, utxoDB)
@@ -134,14 +170,14 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		t.Errorf("ошибка при добавлении первого блока: %v", err)
 	}
 
-	block := Block{
-		BlockHeader{
+	block := block.Block{
+		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
 			RootHash:  [32]byte{},
 			Timestamp: 0,
 		},
-		[]Transaction{},
-		bc.CurrentDifficulty,
+		Transactions: []transaction.Transaction{},
+		Difficulty:   bc.CurrentDifficulty,
 	}
 	block.Mine()
 
@@ -155,16 +191,16 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	utxoDB := UTXODB{}
+	utxoDB := utxo.UTXODB{}
 
-	block := Block{
-		BlockHeader{
+	block := block.Block{
+		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
 			RootHash:  [32]byte{1},
 			Timestamp: 0,
 		},
-		[]Transaction{},
-		bc.CurrentDifficulty,
+		Transactions: []transaction.Transaction{},
+		Difficulty:   bc.CurrentDifficulty,
 	}
 	block.Mine()
 
@@ -176,24 +212,24 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 }
 
 func TestAddBlock_MoreOneCoinbase(t *testing.T) {
-	wallet := NewWallet()
+	myWallet := wallet.NewWallet()
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	utxoDB := UTXODB{}
+	utxoDB := utxo.UTXODB{}
 
-	block := Block{
-		BlockHeader{
+	block := block.Block{
+		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
 			RootHash:  [32]byte{},
 			Timestamp: 0,
 		},
-		[]Transaction{
-			{Outputs: []TxOutput{{bc.CurrentAward, wallet.PublicKey}}},
-			{Outputs: []TxOutput{{bc.CurrentAward, wallet.PublicKey}}},
+		Transactions: []transaction.Transaction{
+			{Outputs: []coin.TxOutput{{Amount: bc.CurrentAward, PublicKey: myWallet.PublicKey}}},
+			{Outputs: []coin.TxOutput{{Amount: bc.CurrentAward, PublicKey: myWallet.PublicKey}}},
 		},
-		bc.CurrentDifficulty,
+		Difficulty: bc.CurrentDifficulty,
 	}
-	block.calculateRootHash()
+	block.CalculateRootHash()
 	block.Mine()
 
 	err := bc.AddBlock(block, utxoDB)
@@ -204,12 +240,12 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 }
 
 func TestAddBlock_CoinbaseExisted(t *testing.T) {
-	wallet := NewWallet()
+	myWallet := wallet.NewWallet()
 	bc := Blockchain{CurrentDifficulty: 1, CurrentAward: 1}
 
-	utxoDB := UTXODB{}
+	utxoDB := utxo.UTXODB{}
 
-	block := bc.NewBlock([]Transaction{}, wallet.PublicKey)
+	block := bc.NewBlock([]transaction.Transaction{}, myWallet.PublicKey)
 
 	if len(block.Transactions) < 1 {
 		t.Fatalf("отсутствует coinbase-транзакция")
@@ -223,7 +259,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 
 	output := tx.Outputs[0]
 
-	if output.PublicKey != wallet.PublicKey {
+	if output.PublicKey != myWallet.PublicKey {
 		t.Fatalf("неверный получатель coinbase-транзакции")
 	}
 
@@ -242,7 +278,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("coinbase-транзакция не добавилась в utxodb")
 	}
 
-	utxo, existed := utxoDB[UTXOKey{tx.Hash(), 0}]
+	utxo, existed := utxoDB[utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}]
 
 	if !existed {
 		t.Fatalf("некорректный ключ coinbase-транзакции в utxodb")
@@ -256,20 +292,20 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("некорректная сумма coinbase-транзакции в utxodb")
 	}
 
-	if !utxo.Output.PublicKey.Equal(wallet.PublicKey) {
+	if !utxo.Output.PublicKey.Equal(myWallet.PublicKey) {
 		t.Fatalf("некорректный получатель coinbase-транзакции в utxodb")
 	}
 }
 
 func TestAddBlock_Success(t *testing.T) {
-	wallet := NewWallet()
-	other := NewWallet()
+	myWallet := wallet.NewWallet()
+	otherWallet := wallet.NewWallet()
 
 	bc := Blockchain{CurrentDifficulty: 2, CurrentAward: 5}
-	utxoDB := UTXODB{}
-	mempool := NewMempool()
+	utxoDB := utxo.UTXODB{}
+	mempool := mempool.NewMempool()
 
-	genesisBlock := bc.NewBlock([]Transaction{}, wallet.PublicKey)
+	genesisBlock := bc.NewBlock([]transaction.Transaction{}, myWallet.PublicKey)
 	genesisBlock.Mine()
 
 	err := bc.AddBlock(genesisBlock, utxoDB)
@@ -278,7 +314,7 @@ func TestAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при добавлении первого блока: %v", err)
 	}
 
-	tx, err := wallet.CreateTransaction(other.PublicKey, 5, utxoDB)
+	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, 5, utxoDB)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании транзакции: %v", err)
@@ -290,13 +326,13 @@ func TestAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
 	}
 
-	_, err = bc.MineAndAddBlock(mempool, utxoDB, 1, wallet.PublicKey)
+	_, err = bc.MineAndAddBlock(mempool, utxoDB, 1, myWallet.PublicKey)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)
 	}
 
-	utxo, existed := utxoDB[UTXOKey{tx.Hash(), 0}]
+	utxo, existed := utxoDB[utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}]
 
 	if !existed {
 		t.Fatalf("некорректный ключ транзакции в utxodb")
@@ -310,7 +346,7 @@ func TestAddBlock_Success(t *testing.T) {
 		t.Fatalf("некорректная сумма транзакции в utxodb")
 	}
 
-	if !utxo.Output.PublicKey.Equal(other.PublicKey) {
+	if !utxo.Output.PublicKey.Equal(otherWallet.PublicKey) {
 		t.Fatalf("некорректный получатель транзакции в utxodb")
 	}
 }

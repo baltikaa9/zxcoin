@@ -1,8 +1,9 @@
-package main
+package merkle
 
 import (
 	"crypto/sha256"
 	"fmt"
+	"zxcoin/transaction"
 )
 
 type Node struct {
@@ -11,7 +12,7 @@ type Node struct {
 	Right *Node
 }
 
-func BuildMerkleTree(transactions []Transaction) Node {
+func BuildMerkleTree(transactions []transaction.Transaction) Node {
 	if len(transactions) == 0 {
 		return Node{}
 	}

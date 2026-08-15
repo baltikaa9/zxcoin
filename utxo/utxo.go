@@ -1,4 +1,6 @@
-package main
+package utxo
+
+import "zxcoin/coin"
 
 type UTXOKey struct {
 	TxID     [32]byte
@@ -6,7 +8,7 @@ type UTXOKey struct {
 }
 
 type UTXOEntry struct {
-	Output   TxOutput
+	Output   coin.TxOutput
 	Reserved bool
 }
 

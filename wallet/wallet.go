@@ -1,17 +1,14 @@
-package main
+package wallet
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
-	"math/big"
+	"zxcoin/coin"
+	"zxcoin/transaction"
+	"zxcoin/utxo"
 )
-
-type Signature struct {
-	R *big.Int
-	S *big.Int
-}
 
 type Wallet struct {
 	PrivateKey *ecdsa.PrivateKey
@@ -32,16 +29,16 @@ func NewWallet() Wallet {
 	return Wallet{privateKey, publicKey}
 }
 
-func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB UTXODB) (Transaction, error) {
-	var inputs []TxInput
-	var outputs []TxOutput
-	var reserved []UTXOKey
+func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.UTXODB) (transaction.Transaction, error) {
+	var inputs []transaction.TxInput
+	var outputs []coin.TxOutput
+	var reserved []utxo.UTXOKey
 
 	total := 0
 
 	for key, entry := range utxoDB {
 		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved {
-			inputs = append(inputs, TxInput{
+			inputs = append(inputs, transaction.TxInput{
 				TxID:     key.TxID,
 				OutIndex: key.OutIndex,
 			})
@@ -57,7 +54,7 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB UTXODB
 	}
 
 	if total < amount {
-		return Transaction{}, fmt.Errorf("недостаточно средств %v/%v", total, amount)
+		return transaction.Transaction{}, fmt.Errorf("недостаточно средств %v/%v", total, amount)
 	}
 
 	for _, key := range reserved {
@@ -66,15 +63,18 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB UTXODB
 		utxoDB[key] = item
 	}
 
-	outputs = append(outputs, TxOutput{amount, to})
+	outputs = append(outputs, coin.TxOutput{Amount: amount, PublicKey: to})
 
 	change := total - amount
 
 	if change > 0 {
-		outputs = append(outputs, TxOutput{change, w.PublicKey})
+		outputs = append(outputs, coin.TxOutput{Amount: change, PublicKey: w.PublicKey})
 	}
 
-	t := NewTransaction(inputs, outputs)
+	t := transaction.Transaction{
+		Inputs:  inputs,
+		Outputs: outputs,
+	}
 	hash := t.Hash()
 
 	for i := range t.Inputs {

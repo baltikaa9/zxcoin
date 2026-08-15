@@ -1,15 +1,20 @@
-package main
+package mempool
+
+import (
+	"zxcoin/transaction"
+	"zxcoin/utxo"
+)
 
 type Mempool struct {
-	transactions map[[32]byte]Transaction
+	transactions map[[32]byte]transaction.Transaction
 }
 
 func NewMempool() *Mempool {
-	return &Mempool{make(map[[32]byte]Transaction)}
+	return &Mempool{make(map[[32]byte]transaction.Transaction)}
 }
 
-func (m *Mempool) GetPending(limit int) []Transaction {
-	var result []Transaction
+func (m *Mempool) GetPending(limit int) []transaction.Transaction {
+	var result []transaction.Transaction
 
 	for _, tx := range m.transactions {
 		if len(result) >= limit {
@@ -22,7 +27,7 @@ func (m *Mempool) GetPending(limit int) []Transaction {
 	return result
 }
 
-func (m *Mempool) Add(transaction Transaction, utxoDB UTXODB) error {
+func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.UTXODB) error {
 	if err := transaction.Validate(utxoDB); err != nil {
 		return err
 	}
