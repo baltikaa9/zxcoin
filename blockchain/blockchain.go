@@ -18,7 +18,7 @@ type Blockchain struct {
 }
 
 func (b *Blockchain) NewBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
-	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{b.CurrentAward, creator}}}
+	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: b.CurrentAward, PublicKey: creator}}}
 
 	prevHash := [32]byte{}
 

@@ -42,8 +42,8 @@ func (t Transaction) Hash() [32]byte {
 	return hash
 }
 
-func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, hash [32]byte) error {
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
+func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) error {
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, transactionHash[:])
 	if err != nil {
 		return err
 	}
