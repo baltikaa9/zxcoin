@@ -2,88 +2,52 @@ package main
 
 import (
 	"fmt"
+	"zxcoin/blockchain"
+	"zxcoin/coin"
+	"zxcoin/mempool"
+	"zxcoin/utxo"
+	"zxcoin/wallet"
 )
 
 func main() {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
+	myWallet := wallet.NewWallet()
+	otherWallet := wallet.NewWallet()
 
 	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
-	utxoDB := UTXODB{
-		UTXOKey{[32]byte{}, 0}: UTXOEntry{TxOutput{5, myWallet.PublicKey}, false},
-		UTXOKey{[32]byte{}, 1}: UTXOEntry{TxOutput{3, myWallet.PublicKey}, false},
-		UTXOKey{[32]byte{}, 2}: UTXOEntry{TxOutput{11, myWallet.PublicKey}, false},
-		UTXOKey{[32]byte{}, 3}: UTXOEntry{TxOutput{10, myWallet.PublicKey}, false},
+	utxoDB := utxo.UTXODB{
+		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 0}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 5, PublicKey: myWallet.PublicKey}},
+		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 1}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 3, PublicKey: myWallet.PublicKey}},
+		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 2}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 11, PublicKey: myWallet.PublicKey}},
+		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 3}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 10, PublicKey: myWallet.PublicKey}},
 	}
 
-	// var txPool []Transaction
-
-	t, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
-	t1, err1 := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
-	// t2, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
-	// t3, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
-	// t4, _ := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
-
+	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
 	if err != nil {
 		panic(err)
 	}
 
-	if err1 != nil {
-		panic(err1)
+	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	if err != nil {
+		panic(err)
 	}
+
 	fmt.Printf("было\n%v\n\n", utxoDB)
 
-	mempool := NewMempool()
+	mp := mempool.NewMempool()
 
-	err = mempool.Add(t, utxoDB)
-	if err != nil {
+	if err := mp.Add(t1, utxoDB); err != nil {
+		panic(err)
+	}
+	if err := mp.Add(t2, utxoDB); err != nil {
 		panic(err)
 	}
 
-	err = mempool.Add(t1, utxoDB)
-	if err != nil {
+	bc := blockchain.Blockchain{CurrentDifficulty: 2, CurrentAward: 42}
+
+	if _, err := bc.MineAndAddBlock(mp, utxoDB, 3, myWallet.PublicKey); err != nil {
 		panic(err)
 	}
-
-	b := Blockchain{CurrentDifficulty: 2, CurrentAward: 100}
-
-	b.MineAndAddBlock(mempool, utxoDB, 3, myWallet.PublicKey)
-
-	// txs := mempool.GetPending(3)
-
-	// block := b.NewBlock(txs, myWallet.PublicKey)
-	// block.Header.Nonce = 10
-	// block.Mine()
-
-	// fmt.Printf("nonce = %v\n", block.Header.Nonce)
-	// fmt.Printf("root = %v\n", block.Header.RootHash)
-	// fmt.Printf("prev = %v\n", block.Header.PrevHash)
-	// err = b.AddBlock(block, utxoDB)
-
-	// if err != nil {
-	// panic(err)
-	// }
-
-	// for _, tx := range txs {
-	// mempool.Remove(tx.Hash())
-	// }
-
-	// block1 := b.NewBlock([]Transaction{t1})
-	// block1.Header.Nonce = 10
-	// block1.Mine()
-
-	// fmt.Printf("nonce = %v\n", block1.Header.Nonce)
-	// fmt.Printf("root = %v\n", block1.Header.RootHash)
-	// fmt.Printf("prev = %v\n", block1.Header.PrevHash)
-
-	// fmt.Printf("%v\n\n", utxoDB)
-
-	// err1 = b.AddBlock(block1, utxoDB)
-
-	// if err1 != nil {
-	// panic(err1)
-	// }
 
 	fmt.Printf("стало\n%v\n", utxoDB)
 }
