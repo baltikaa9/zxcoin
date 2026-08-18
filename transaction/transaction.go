@@ -76,7 +76,11 @@ func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 		inputAmount += utxo.Output.Amount
 	}
 
-	for _, output := range t.Outputs {
+	for i, output := range t.Outputs {
+		if output.Amount <= 0 {
+			return &NonPositiveOutputError{TxID: t.Hash(), OutIndex: i, Value: output.Amount}
+		}
+
 		outputAmount += output.Amount
 	}
 

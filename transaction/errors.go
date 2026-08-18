@@ -28,3 +28,13 @@ type NotEnoughMoneyError struct {
 func (e *NotEnoughMoneyError) Error() string {
 	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }
+
+type NonPositiveOutputError struct {
+	TxID     [32]byte
+	OutIndex int
+	Value    int
+}
+
+func (e *NonPositiveOutputError) Error() string {
+	return fmt.Sprintf("неположительное значение выхода %v транзакции %v: %v", e.OutIndex, e.TxID, e.Value)
+}
