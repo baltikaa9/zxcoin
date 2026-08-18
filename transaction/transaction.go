@@ -85,7 +85,7 @@ func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 	}
 
 	if outputAmount > inputAmount {
-		return &NotEnoughMoneyError{inputAmount, outputAmount}
+		return &InsufficientFundsError{inputAmount, outputAmount}
 	}
 
 	return nil

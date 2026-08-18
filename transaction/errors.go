@@ -20,12 +20,12 @@ func (e *InvalidSignatureError) Error() string {
 	return fmt.Sprintf("UTXO (%v, %v) не верная подпись", e.TxID, e.OutIndex)
 }
 
-type NotEnoughMoneyError struct {
+type InsufficientFundsError struct {
 	Input  int
 	Output int
 }
 
-func (e *NotEnoughMoneyError) Error() string {
+func (e *InsufficientFundsError) Error() string {
 	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }
 

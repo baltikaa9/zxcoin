@@ -60,7 +60,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 	}
 }
 
-func TestValidate_NotEnoughMoney(t *testing.T) {
+func TestValidate_InsufficientFunds(t *testing.T) {
 	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	publicKey := &privateKey.PublicKey
 

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"fmt"
 	"zxcoin/coin"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
@@ -54,7 +53,7 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 	}
 
 	if total < amount {
-		return transaction.Transaction{}, fmt.Errorf("недостаточно средств %v/%v", total, amount)
+		return transaction.Transaction{}, &InsufficientFundsError{Available: total, Requested: amount}
 	}
 
 	for _, key := range reserved {
