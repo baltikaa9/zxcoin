@@ -24,7 +24,7 @@ func main() {
 
 	// t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
 	// if err != nil {
-		// panic(err)
+	// panic(err)
 	// }
 
 	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 0, utxoDB)
@@ -37,7 +37,7 @@ func main() {
 	mp := mempool.NewMempool()
 
 	// if err := mp.Add(t1, utxoDB); err != nil {
-		// panic(err)
+	// panic(err)
 	// }
 	if err := mp.Add(t2, utxoDB); err != nil {
 		panic(err)
