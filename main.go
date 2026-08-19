@@ -27,7 +27,7 @@ func main() {
 	// panic(err)
 	// }
 
-	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 0, utxoDB)
+	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func main() {
 		panic(err)
 	}
 
-	bc := blockchain.Blockchain{CurrentDifficulty: 2, CurrentAward: 42}
+	bc := blockchain.NewBlockchain(2, 42)
 
 	if _, err := bc.MineAndAddBlock(mp, utxoDB, 3, myWallet.PublicKey); err != nil {
 		panic(err)

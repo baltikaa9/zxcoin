@@ -12,12 +12,12 @@ func (e *DoubleSpendError) Error() string {
 }
 
 type InvalidNonceError struct {
-	blockHash  [32]byte
-	difficulty int
+	BlockHash  [32]byte
+	Difficulty int
 }
 
 func (e *InvalidNonceError) Error() string {
-	return fmt.Sprintf("неверный nonce. Сложность: %v, хеш: %v", e.difficulty, e.blockHash)
+	return fmt.Sprintf("неверный nonce. Сложность: %v, хеш: %v", e.Difficulty, e.BlockHash)
 }
 
 type InvalidPrevHashError struct{}

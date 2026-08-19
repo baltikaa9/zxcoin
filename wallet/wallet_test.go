@@ -104,7 +104,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
-	if !utxoDB[key].Reserved {
+	if !utxoDB[key].Reserved() {
 		t.Fatalf("отсутсвует резервация utxo")
 	}
 }
@@ -179,11 +179,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		}
 	}
 
-	if !utxoDB[key0].Reserved {
+	if !utxoDB[key0].Reserved() {
 		t.Fatalf("отсутсвует резервация 0 utxo")
 	}
 
-	if !utxoDB[key1].Reserved {
+	if !utxoDB[key1].Reserved() {
 		t.Fatalf("отсутсвует резервация 1 utxo")
 	}
 }
@@ -252,7 +252,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
-	if !utxoDB[key].Reserved {
+	if !utxoDB[key].Reserved() {
 		t.Fatalf("отсутсвует резервация utxo")
 	}
 }
@@ -337,11 +337,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		}
 	}
 
-	if !utxoDB[key0].Reserved {
+	if !utxoDB[key0].Reserved() {
 		t.Fatalf("отсутсвует резервация 0 utxo")
 	}
 
-	if !utxoDB[key1].Reserved {
+	if !utxoDB[key1].Reserved() {
 		t.Fatalf("отсутсвует резервация 1 utxo")
 	}
 }

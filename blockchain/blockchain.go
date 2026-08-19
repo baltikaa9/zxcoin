@@ -12,18 +12,22 @@ import (
 )
 
 type Blockchain struct {
-	Blocks            []block.Block
-	CurrentDifficulty int
-	CurrentAward      int
+	blocks            []block.Block
+	currentDifficulty int
+	currentAward      int
 }
 
-func (b *Blockchain) NewBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
-	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: b.CurrentAward, PublicKey: creator}}}
+func NewBlockchain(difficulty int, award int) Blockchain {
+	return Blockchain{currentDifficulty: difficulty, currentAward: award}
+}
+
+func (b *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
+	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: b.currentAward, PublicKey: creator}}}
 
 	prevHash := [32]byte{}
 
-	if len(b.Blocks) > 0 {
-		prevHash = b.Blocks[len(b.Blocks)-1].Header.Hash()
+	if len(b.blocks) > 0 {
+		prevHash = b.blocks[len(b.blocks)-1].Header.Hash()
 	}
 
 	block := block.Block{
@@ -33,7 +37,7 @@ func (b *Blockchain) NewBlock(transactions []transaction.Transaction, creator *e
 			Timestamp: uint32(time.Now().Unix()),
 		},
 		Transactions: append(transactions, coinbaseTransaction),
-		Difficulty:   b.CurrentDifficulty,
+		Difficulty:   b.currentDifficulty,
 	}
 
 	block.CalculateRootHash()
@@ -44,13 +48,13 @@ func (b *Blockchain) NewBlock(transactions []transaction.Transaction, creator *e
 func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 	blockHash := block.Header.Hash()
 
-	for i := range b.CurrentDifficulty {
+	for i := range b.currentDifficulty {
 		if blockHash[i] != 0 {
-			return &InvalidNonceError{blockHash, b.CurrentDifficulty}
+			return &InvalidNonceError{blockHash, b.currentDifficulty}
 		}
 	}
 
-	if len(b.Blocks) > 0 && block.Header.PrevHash != b.Blocks[len(b.Blocks)-1].Header.Hash() {
+	if len(b.blocks) > 0 && block.Header.PrevHash != b.blocks[len(b.blocks)-1].Header.Hash() {
 		return &InvalidPrevHashError{}
 	}
 
@@ -62,7 +66,7 @@ func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 	foundCoinbase := false
 
 	for _, transaction := range block.Transactions {
-		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == b.CurrentAward {
+		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == b.currentAward {
 			if foundCoinbase {
 				return &MoreOneCoinbaseError{}
 			}
@@ -92,19 +96,19 @@ func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 		}
 
 		for i, output := range transaction.Outputs {
-			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: i}] = utxo.UTXOEntry{Output: output, Reserved: false}
+			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: i}] = utxo.UTXOEntry{Output: output}
 		}
 	}
 
-	b.Blocks = append(b.Blocks, block)
+	b.blocks = append(b.blocks, block)
 
 	return nil
 }
 
-func (b *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, limit int, creator *ecdsa.PublicKey) (block.Block, error) {
-	txs := mempool.GetPending(limit)
+func (b *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
+	txs := mempool.GetPending(transactionLimit)
 
-	newBlock := b.NewBlock(txs, creator)
+	newBlock := b.newBlock(txs, creator)
 	newBlock.Mine()
 
 	if err := b.AddBlock(newBlock, utxoDB); err != nil {

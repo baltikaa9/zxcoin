@@ -23,7 +23,6 @@ func TestAdd(t *testing.T) {
 				Amount:    amount,
 				PublicKey: publicKey,
 			},
-			Reserved: false,
 		},
 	}
 	tx := transaction.Transaction{

@@ -36,7 +36,7 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 	total := 0
 
 	for key, entry := range utxoDB {
-		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved {
+		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved() {
 			inputs = append(inputs, transaction.TxInput{
 				TxID:     key.TxID,
 				OutIndex: key.OutIndex,
@@ -57,9 +57,11 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 	}
 
 	for _, key := range reserved {
-		item := utxoDB[key]
-		item.Reserved = true
-		utxoDB[key] = item
+		err := utxoDB.Reserve(key)
+
+		if err != nil {
+			return transaction.Transaction{}, err
+		}
 	}
 
 	outputs = append(outputs, coin.TxOutput{Amount: amount, PublicKey: to})
