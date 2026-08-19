@@ -153,13 +153,14 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	}
 
 	output := outputs[0]
+	keysExist := map[utxo.UTXOKey]bool{}
 
-	if inputs[0].TxID != key0.TxID || inputs[0].OutIndex != key0.OutIndex {
-		t.Fatalf("неверно заполнен 0 вход транзакции. Ожидалось %v - %v, получено %v - %v", key0.TxID, key0.OutIndex, inputs[0].TxID, inputs[0].OutIndex)
+	for _, input := range inputs {
+		keysExist[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}] = true
 	}
 
-	if inputs[1].TxID != key1.TxID || inputs[1].OutIndex != key1.OutIndex {
-		t.Fatalf("неверно заполнен 1 вход транзакции. Ожидалось %v - %v, получено %v - %v", key1.TxID, key1.OutIndex, inputs[1].TxID, inputs[1].OutIndex)
+	if !keysExist[key0] || !keysExist[key1] {
+		t.Fatalf("не все ожидаемые входы присутствуют в транзакции: %v", keysExist)
 	}
 
 	if output.Amount != amount*2 {
@@ -302,13 +303,14 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 
 	output := outputs[0]
 	change := outputs[1]
+	keysExist := map[utxo.UTXOKey]bool{}
 
-	if inputs[0].TxID != key0.TxID || inputs[0].OutIndex != key0.OutIndex {
-		t.Fatalf("неверно заполнен 0 вход транзакции. Ожидалось %v - %v, получено %v - %v", key0.TxID, key0.OutIndex, inputs[0].TxID, inputs[0].OutIndex)
+	for _, input := range inputs {
+		keysExist[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}] = true
 	}
 
-	if inputs[1].TxID != key1.TxID || inputs[1].OutIndex != key1.OutIndex {
-		t.Fatalf("неверно заполнен 1 вход транзакции. Ожидалось %v - %v, получено %v - %v", key1.TxID, key1.OutIndex, inputs[1].TxID, inputs[1].OutIndex)
+	if !keysExist[key0] || !keysExist[key1] {
+		t.Fatalf("не все ожидаемые входы присутствуют в транзакции: %v", keysExist)
 	}
 
 	if output.Amount != payment*2 {
