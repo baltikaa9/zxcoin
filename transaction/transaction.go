@@ -28,7 +28,6 @@ type Transaction struct {
 
 func (t Transaction) Hash() [32]byte {
 	tmp := t
-
 	tmp.Inputs = make([]TxInput, len(t.Inputs))
 	copy(tmp.Inputs, t.Inputs)
 
@@ -44,6 +43,7 @@ func (t Transaction) Hash() [32]byte {
 
 func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) error {
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, transactionHash[:])
+
 	if err != nil {
 		return err
 	}
@@ -58,9 +58,22 @@ func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
 }
 
 func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
-	inputAmount := 0
-	outputAmount := 0
+	if err := t.validateInputs(utxoDB); err != nil {
+		return err
+	}
 
+	if err := t.validateOutputs(); err != nil {
+		return err
+	}
+
+	if err := t.validateSum(utxoDB); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 	for _, input := range t.Inputs {
 		key := utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}
 		utxo, exists := utxoDB[key]
@@ -72,15 +85,31 @@ func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 		if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, t.Hash())) {
 			return &InvalidSignatureError{input.TxID, input.OutIndex}
 		}
-
-		inputAmount += utxo.Output.Amount
 	}
 
+	return nil
+}
+
+func (t Transaction) validateOutputs() error {
 	for i, output := range t.Outputs {
 		if output.Amount <= 0 {
 			return &NonPositiveOutputError{TxID: t.Hash(), OutIndex: i, Value: output.Amount}
 		}
+	}
 
+	return nil
+}
+
+func (t Transaction) validateSum(utxoDB utxo.UTXODB) error {
+	inputAmount := 0
+	outputAmount := 0
+
+	for _, input := range t.Inputs {
+		utxo := utxoDB[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}]
+		inputAmount += utxo.Output.Amount
+	}
+
+	for _, output := range t.Outputs {
 		outputAmount += output.Amount
 	}
 
