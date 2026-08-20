@@ -5,24 +5,16 @@ import (
 	"errors"
 	"testing"
 	"zxcoin/coin"
+	"zxcoin/testutil"
 	"zxcoin/utxo"
 )
 
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 	myWallet := NewWallet()
 	otherWallet := NewWallet()
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: myWallet.PublicKey,
-			},
-		},
-	}
-	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
+	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2, utxoDB)
 
 	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
@@ -32,17 +24,8 @@ func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 	myWallet := NewWallet()
 	otherWallet := NewWallet()
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: otherWallet.PublicKey,
-			},
-		},
-	}
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey)
 	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 
 	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
@@ -58,14 +41,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		OutIndex: 0,
 	}
 	amount := 5
-	utxoDB := utxo.UTXODB{
-		key: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
-		},
-	}
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount, utxoDB)
 
 	if err != nil {
@@ -121,18 +97,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		OutIndex: 1,
 	}
 	amount := 5
-	utxoDB := utxo.UTXODB{
-		key0: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
-		},
-		key1: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
+	utxoDB[key1] = utxo.UTXOEntry{
+		Output: coin.TxOutput{
+			Amount:    amount,
+			PublicKey: myWallet.PublicKey,
 		},
 	}
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2, utxoDB)
@@ -197,14 +166,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	}
 	amount := 5
 	payment := 4
-	utxoDB := utxo.UTXODB{
-		key: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
-		},
-	}
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment, utxoDB)
 
 	if err != nil {
@@ -270,18 +232,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	}
 	amount := 5
 	payment := 4
-	utxoDB := utxo.UTXODB{
-		key0: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
-		},
-		key1: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: myWallet.PublicKey,
-			},
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
+	utxoDB[key1] = utxo.UTXOEntry{
+		Output: coin.TxOutput{
+			Amount:    amount,
+			PublicKey: myWallet.PublicKey,
 		},
 	}
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment*2, utxoDB)

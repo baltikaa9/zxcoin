@@ -2,43 +2,69 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"errors"
 	"testing"
 	"zxcoin/block"
 	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/merkle"
+	"zxcoin/testutil"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
 )
 
-func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
+func mineGenesisBlock(t *testing.T, bc *Blockchain, utxoDB utxo.UTXODB) block.Block {
+	t.Helper()
+	genesisBlock := block.Block{
+		Header:       block.BlockHeader{},
+		Transactions: []transaction.Transaction{},
+		Difficulty:   bc.currentDifficulty,
 	}
+	genesisBlock.CalculateRootHash()
+	genesisBlock.Mine()
+
+	if err := bc.AddBlock(genesisBlock, utxoDB); err != nil {
+		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
+	}
+
+	return genesisBlock
+}
+
+func assertUTXO(t *testing.T, utxoDB utxo.UTXODB, key utxo.UTXOKey, expectedAmount int, expectedOwner *ecdsa.PublicKey) {
+	t.Helper()
+	entry, existed := utxoDB[key]
+
+	if !existed {
+		t.Fatalf("UTXO не найден: %v", key)
+	}
+
+	if entry.Reserved() {
+		t.Fatalf("UTXO некорректно зарезервирован: %v", key)
+	}
+
+	if entry.Output.Amount != expectedAmount {
+		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, entry.Output.Amount)
+	}
+
+	if !entry.Output.PublicKey.Equal(expectedOwner) {
+		t.Fatalf("неверный владелец UTXO")
+	}
+}
+
+func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	t1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	t1.Inputs[0].Sign(privateKey, t1.Hash())
 
 	t2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	t2.Inputs[0].Sign(privateKey, t2.Hash())
 
@@ -54,20 +80,9 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 }
 
 func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
@@ -75,7 +90,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 			{TxID: [32]byte{}, OutIndex: 0},
 		},
 		Outputs: []coin.TxOutput{
-			{Amount: 5, PublicKey: publicKey},
+			{Amount: amount, PublicKey: publicKey},
 		},
 	}
 
@@ -97,27 +112,16 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 }
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
 			{TxID: [32]byte{}, OutIndex: 0},
 		},
 		Outputs: []coin.TxOutput{
-			{Amount: 5, PublicKey: publicKey},
+			{Amount: amount, PublicKey: publicKey},
 		},
 	}
 	tx.Inputs[0].Sign(privateKey, tx.Hash())
@@ -134,27 +138,8 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	utxoDB := utxo.UTXODB{}
-
-	genesisBlock := block.Block{
-		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
-			Timestamp: 0,
-		},
-		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
-	}
-	genesisBlock.CalculateRootHash()
-	genesisBlock.Mine()
-
-	err := bc.AddBlock(genesisBlock, utxoDB)
-
-	if err != nil {
-		t.Errorf("ошибка при добавлении первого блока: %v", err)
-	}
-
+	mineGenesisBlock(t, &bc, utxoDB)
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -166,8 +151,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	}
 	block.CalculateRootHash()
 	block.Mine()
-
-	err = bc.AddBlock(block, utxoDB)
+	err := bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*InvalidPrevHashError](err); !ok {
 		t.Fatalf("ожидалась InvalidPrevHashError, получено: %v", err)
@@ -176,27 +160,8 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	utxoDB := utxo.UTXODB{}
-
-	genesisBlock := block.Block{
-		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
-			Timestamp: 0,
-		},
-		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
-	}
-	genesisBlock.CalculateRootHash()
-	genesisBlock.Mine()
-
-	err := bc.AddBlock(genesisBlock, utxoDB)
-
-	if err != nil {
-		t.Errorf("ошибка при добавлении первого блока: %v", err)
-	}
-
+	genesisBlock := mineGenesisBlock(t, &bc, utxoDB)
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  genesisBlock.Header.Hash(),
@@ -207,8 +172,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		Difficulty:   bc.currentDifficulty,
 	}
 	block.Mine()
-
-	err = bc.AddBlock(block, utxoDB)
+	err := bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*InvalidMerkleRootError](err); !ok {
 		t.Fatalf("ожидалась InvalidMerkleRootError, получено: %v", err)
@@ -216,13 +180,9 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 }
 
 func TestAddBlock_MoreOneCoinbase(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
+	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	utxoDB := utxo.UTXODB{}
-
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -235,9 +195,9 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		},
 		Difficulty: bc.currentDifficulty,
 	}
+
 	block.CalculateRootHash()
 	block.Mine()
-
 	err := bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*MoreOneCoinbaseError](err); !ok {
@@ -246,10 +206,8 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 }
 
 func TestNewBlock_CoinbaseExisted(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	block := bc.newBlock([]transaction.Transaction{}, publicKey)
 
 	if len(block.Transactions) < 1 {
@@ -274,30 +232,11 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 }
 
 func TestNewBlock_ValidPrevHash(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
+	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
 	utxoDB := utxo.UTXODB{}
 
-	genesisBlock := block.Block{
-		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
-			Timestamp: 0,
-		},
-		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
-	}
-	genesisBlock.CalculateRootHash()
-	genesisBlock.Mine()
-
-	err := bc.AddBlock(genesisBlock, utxoDB)
-
-	if err != nil {
-		t.Errorf("ошибка при добавлении первого блока: %v", err)
-	}
-
+	genesisBlock := mineGenesisBlock(t, &bc, utxoDB)
 	block := bc.newBlock([]transaction.Transaction{}, publicKey)
 	expectedHash := genesisBlock.Header.Hash()
 
@@ -307,11 +246,8 @@ func TestNewBlock_ValidPrevHash(t *testing.T) {
 }
 
 func TestNewBlock_ValidRootHash(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
+	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{1}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: 3, PublicKey: publicKey}},
@@ -329,14 +265,10 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 }
 
 func TestAddBlock_CoinbaseExisted(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-
 	utxoDB := utxo.UTXODB{}
-
 	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}}}
-
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -359,39 +291,18 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("coinbase-транзакция не добавилась в utxodb")
 	}
 
-	utxo, existed := utxoDB[utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}]
-
-	if !existed {
-		t.Fatalf("некорректный ключ coinbase-транзакции в utxodb")
-	}
-
-	if utxo.Reserved() {
-		t.Fatalf("некорректная резервация coinbase-транзакции в utxodb")
-	}
-
-	if utxo.Output.Amount != bc.currentAward {
-		t.Fatalf("некорректная сумма coinbase-транзакции в utxodb")
-	}
-
-	if !utxo.Output.PublicKey.Equal(publicKey) {
-		t.Fatalf("некорректный получатель coinbase-транзакции в utxodb")
-	}
+	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}, bc.currentAward, publicKey)
 }
 
 func TestMineAndAddBlock_Success(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	otherPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	otherPublicKey := &otherPrivateKey.PublicKey
-
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	_, otherPublicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 2, currentAward: 5}
 	utxoDB := utxo.UTXODB{}
 	mempool := mempool.NewMempool()
 
 	genesisBlock := bc.newBlock([]transaction.Transaction{}, publicKey)
 	genesisBlock.Mine()
-
 	err := bc.AddBlock(genesisBlock, utxoDB)
 
 	if err != nil {
@@ -420,21 +331,5 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)
 	}
 
-	utxo, existed := utxoDB[utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}]
-
-	if !existed {
-		t.Fatalf("некорректный ключ транзакции в utxodb")
-	}
-
-	if utxo.Reserved() {
-		t.Fatalf("некорректная резервация транзакции в utxodb")
-	}
-
-	if utxo.Output.Amount != bc.currentAward {
-		t.Fatalf("некорректная сумма транзакции в utxodb")
-	}
-
-	if !utxo.Output.PublicKey.Equal(otherPublicKey) {
-		t.Fatalf("некорректный получатель транзакции в utxodb")
-	}
+	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}, bc.currentAward, otherPublicKey)
 }

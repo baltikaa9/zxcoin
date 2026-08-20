@@ -1,30 +1,16 @@
 package mempool
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"testing"
 	"zxcoin/coin"
+	"zxcoin/testutil"
 	"zxcoin/transaction"
-	"zxcoin/utxo"
 )
 
 func TestAdd(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	amount := 5
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount}},

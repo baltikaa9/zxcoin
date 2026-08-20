@@ -1,18 +1,15 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"errors"
 	"testing"
 	"zxcoin/coin"
+	"zxcoin/testutil"
 	"zxcoin/utxo"
 )
 
 func TestValidate_UTXONotFound(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
 
 	utxoDB := utxo.UTXODB{}
 
@@ -30,26 +27,14 @@ func TestValidate_UTXONotFound(t *testing.T) {
 }
 
 func TestValidate_InvalidSignature(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	attackerPrivateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	_, publicKey := testutil.GenerateKeyPair(t)
+	attackerPrivateKey, _ := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	tx.Inputs[0].Sign(attackerPrivateKey, tx.Hash())
 
@@ -61,24 +46,13 @@ func TestValidate_InvalidSignature(t *testing.T) {
 }
 
 func TestValidate_InsufficientFunds(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 10, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount * 2, PublicKey: publicKey}},
 	}
 	tx.Inputs[0].Sign(privateKey, tx.Hash())
 
@@ -90,20 +64,9 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 }
 
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
@@ -119,24 +82,13 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 }
 
 func TestValidate_NonPositiveOutputNegative(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: -10, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: -amount, PublicKey: publicKey}},
 	}
 	tx.Inputs[0].Sign(privateKey, tx.Hash())
 
@@ -148,24 +100,13 @@ func TestValidate_NonPositiveOutputNegative(t *testing.T) {
 }
 
 func TestValidate_Success(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
-
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    5,
-				PublicKey: publicKey,
-			},
-		},
-	}
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	amount := 5
+	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	tx.Inputs[0].Sign(privateKey, tx.Hash())
 

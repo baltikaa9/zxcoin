@@ -1,18 +1,15 @@
 package merkle
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
 	"testing"
 	"zxcoin/coin"
+	"zxcoin/testutil"
 	"zxcoin/transaction"
 )
 
 func TestBuildMerkleTree_OneNode(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 
 	tx := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
@@ -26,8 +23,7 @@ func TestBuildMerkleTree_OneNode(t *testing.T) {
 }
 
 func TestBuildMerkleTree_TwoNodes(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
@@ -48,8 +44,7 @@ func TestBuildMerkleTree_TwoNodes(t *testing.T) {
 }
 
 func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
@@ -77,8 +72,7 @@ func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
 }
 
 func TestBuildMerkleTree_Twice(t *testing.T) {
-	privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	publicKey := &privateKey.PublicKey
+	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
