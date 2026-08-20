@@ -21,13 +21,13 @@ func NewBlockchain(difficulty int, award int) Blockchain {
 	return Blockchain{currentDifficulty: difficulty, currentAward: award}
 }
 
-func (b *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
-	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: b.currentAward, PublicKey: creator}}}
+func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
+	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: creator}}}
 
 	prevHash := [32]byte{}
 
-	if len(b.blocks) > 0 {
-		prevHash = b.blocks[len(b.blocks)-1].Header.Hash()
+	if len(bc.blocks) > 0 {
+		prevHash = bc.blocks[len(bc.blocks)-1].Header.Hash()
 	}
 
 	block := block.Block{
@@ -37,7 +37,7 @@ func (b *Blockchain) newBlock(transactions []transaction.Transaction, creator *e
 			Timestamp: uint32(time.Now().Unix()),
 		},
 		Transactions: append(transactions, coinbaseTransaction),
-		Difficulty:   b.currentDifficulty,
+		Difficulty:   bc.currentDifficulty,
 	}
 
 	block.CalculateRootHash()
@@ -45,28 +45,80 @@ func (b *Blockchain) newBlock(transactions []transaction.Transaction, creator *e
 	return block
 }
 
-func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
+func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
+	if err := bc.verifyProofOfWork(block); err != nil {
+		return err
+	}
+
+	if err := bc.verifyPrevHash(block); err != nil {
+		return err
+	}
+
+	if err := bc.verifyMerkleRoot(block); err != nil {
+		return err
+	}
+
+	if err := bc.verifyTransactions(block, utxoDB); err != nil {
+		return err
+	}
+
+	bc.applyBlock(block, utxoDB)
+	bc.blocks = append(bc.blocks, block)
+
+	return nil
+}
+
+func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
+	txs := mempool.GetPending(transactionLimit)
+
+	newBlock := bc.newBlock(txs, creator)
+	newBlock.Mine()
+
+	if err := bc.AddBlock(newBlock, utxoDB); err != nil {
+		return block.Block{}, err
+	}
+
+	for _, tx := range txs {
+		mempool.Remove(tx.Hash())
+	}
+
+	return newBlock, nil
+}
+
+func (bc *Blockchain) verifyProofOfWork(block block.Block) error {
 	blockHash := block.Header.Hash()
 
-	for i := range b.currentDifficulty {
+	for i := range bc.currentDifficulty {
 		if blockHash[i] != 0 {
-			return &InvalidNonceError{blockHash, b.currentDifficulty}
+			return &InvalidNonceError{blockHash, bc.currentDifficulty}
 		}
 	}
 
-	if len(b.blocks) > 0 && block.Header.PrevHash != b.blocks[len(b.blocks)-1].Header.Hash() {
+	return nil
+}
+
+func (bc *Blockchain) verifyPrevHash(block block.Block) error {
+	if len(bc.blocks) > 0 && block.Header.PrevHash != bc.blocks[len(bc.blocks)-1].Header.Hash() {
 		return &InvalidPrevHashError{}
 	}
 
+	return nil
+}
+
+func (bc *Blockchain) verifyMerkleRoot(block block.Block) error {
 	if block.Header.RootHash != merkle.BuildMerkleTree(block.Transactions).Hash {
 		return &InvalidMerkleRootError{}
 	}
 
+	return nil
+}
+
+func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.UTXODB) error {
 	spentInThisBlock := make(map[utxo.UTXOKey]bool)
 	foundCoinbase := false
 
 	for _, transaction := range block.Transactions {
-		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == b.currentAward {
+		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == bc.currentAward {
 			if foundCoinbase {
 				return &MoreOneCoinbaseError{}
 			}
@@ -90,6 +142,10 @@ func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 		}
 	}
 
+	return nil
+}
+
+func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) {
 	for _, transaction := range block.Transactions {
 		for _, input := range transaction.Inputs {
 			delete(utxoDB, utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex})
@@ -99,25 +155,4 @@ func (b *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: i}] = utxo.UTXOEntry{Output: output}
 		}
 	}
-
-	b.blocks = append(b.blocks, block)
-
-	return nil
-}
-
-func (b *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
-	txs := mempool.GetPending(transactionLimit)
-
-	newBlock := b.newBlock(txs, creator)
-	newBlock.Mine()
-
-	if err := b.AddBlock(newBlock, utxoDB); err != nil {
-		return block.Block{}, err
-	}
-
-	for _, tx := range txs {
-		mempool.Remove(tx.Hash())
-	}
-
-	return newBlock, nil
 }
