@@ -70,15 +70,23 @@ func (w Wallet) selectInputs(amount int, utxoDB utxo.UTXODB) ([]transaction.TxIn
 }
 
 func (w Wallet) reserveInputs(inputs []transaction.TxInput, utxoDB utxo.UTXODB) error {
+	reserved := make([]utxo.UTXOKey, 0, len(inputs))
+
 	for _, input := range inputs {
-		err := utxoDB.Reserve(utxo.UTXOKey{
+		key := utxo.UTXOKey{
 			TxID:     input.TxID,
 			OutIndex: input.OutIndex,
-		})
+		}
 
-		if err != nil {
+		if err := utxoDB.Reserve(key); err != nil {
+			for _, key := range reserved {
+				utxoDB.Release(key)
+			}
+
 			return err
 		}
+
+		reserved = append(reserved, key)
 	}
 
 	return nil
