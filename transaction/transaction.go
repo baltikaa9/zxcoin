@@ -26,6 +26,20 @@ type Transaction struct {
 	Outputs []coin.TxOutput
 }
 
+func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa.PrivateKey) Transaction {
+	t := Transaction{
+		Inputs:  inputs,
+		Outputs: outputs,
+	}
+	hash := t.Hash()
+
+	for i := range t.Inputs {
+		t.Inputs[i].Sign(privateKey, hash)
+	}
+
+	return t
+}
+
 func (t Transaction) Hash() [32]byte {
 	tmp := t
 	tmp.Inputs = make([]TxInput, len(t.Inputs))

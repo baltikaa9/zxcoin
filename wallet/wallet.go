@@ -29,10 +29,23 @@ func NewWallet() Wallet {
 }
 
 func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.UTXODB) (transaction.Transaction, error) {
-	var inputs []transaction.TxInput
-	var outputs []coin.TxOutput
-	var reserved []utxo.UTXOKey
+	inputs, total, err := w.selectInputs(amount, utxoDB)
 
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	if err := w.reserveInputs(inputs, utxoDB); err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	t := transaction.NewTransaction(inputs, w.createOutputs(to, amount, total), w.PrivateKey)
+
+	return t, nil
+}
+
+func (w Wallet) selectInputs(amount int, utxoDB utxo.UTXODB) ([]transaction.TxInput, int, error) {
+	inputs := make([]transaction.TxInput, 0)
 	total := 0
 
 	for key, entry := range utxoDB {
@@ -41,9 +54,6 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 				TxID:     key.TxID,
 				OutIndex: key.OutIndex,
 			})
-
-			reserved = append(reserved, key)
-
 			total += entry.Output.Amount
 
 			if total >= amount {
@@ -53,34 +63,34 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 	}
 
 	if total < amount {
-		return transaction.Transaction{}, &InsufficientFundsError{Available: total, Requested: amount}
+		return []transaction.TxInput{}, 0, &InsufficientFundsError{Available: total, Requested: amount}
 	}
 
-	for _, key := range reserved {
-		err := utxoDB.Reserve(key)
+	return inputs, total, nil
+}
+
+func (w Wallet) reserveInputs(inputs []transaction.TxInput, utxoDB utxo.UTXODB) error {
+	for _, input := range inputs {
+		err := utxoDB.Reserve(utxo.UTXOKey{
+			TxID:     input.TxID,
+			OutIndex: input.OutIndex,
+		})
 
 		if err != nil {
-			return transaction.Transaction{}, err
+			return err
 		}
 	}
 
-	outputs = append(outputs, coin.TxOutput{Amount: amount, PublicKey: to})
+	return nil
+}
 
+func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount int, total int) []coin.TxOutput {
+	outputs := []coin.TxOutput{{Amount: amount, PublicKey: to}}
 	change := total - amount
 
 	if change > 0 {
 		outputs = append(outputs, coin.TxOutput{Amount: change, PublicKey: w.PublicKey})
 	}
 
-	t := transaction.Transaction{
-		Inputs:  inputs,
-		Outputs: outputs,
-	}
-	hash := t.Hash()
-
-	for i := range t.Inputs {
-		t.Inputs[i].Sign(w.PrivateKey, hash)
-	}
-
-	return t, nil
+	return outputs
 }
