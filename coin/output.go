@@ -1,3 +1,4 @@
+// Package coin определяет базовый примитив ценности в системе — выход транзакции (TxOutput).
 package coin
 
 import "crypto/ecdsa"
