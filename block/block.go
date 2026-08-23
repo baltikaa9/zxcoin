@@ -2,7 +2,6 @@
 package block
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"zxcoin/merkle"
@@ -22,16 +21,17 @@ type Block struct {
 	Difficulty   uint64
 }
 
+func (bh BlockHeader) serialize() []byte {
+	buf := bh.PrevHash[:]
+	buf = append(buf, bh.RootHash[:]...)
+	buf = binary.BigEndian.AppendUint64(buf, bh.Nonce)
+	buf = binary.BigEndian.AppendUint32(buf, bh.Timestamp)
+
+	return buf
+}
+
 func (bh BlockHeader) Hash() [32]byte {
-	var buf bytes.Buffer
-
-	buf.Write(bh.PrevHash[:])
-	buf.Write(bh.RootHash[:])
-
-	binary.Write(&buf, binary.BigEndian, bh.Nonce)
-	binary.Write(&buf, binary.BigEndian, bh.Timestamp)
-
-	return sha256.Sum256(buf.Bytes())
+	return sha256.Sum256(bh.serialize())
 }
 
 func (b *Block) Mine() {
@@ -55,7 +55,14 @@ func (b *Block) Mine() {
 	}
 }
 
-func (b *Block) CalculateRootHash() {
-	merkleTree := merkle.BuildMerkleTree(b.Transactions)
+func (b *Block) CalculateRootHash() error {
+	merkleTree, err := merkle.BuildMerkleTree(b.Transactions)
+
+	if err != nil {
+		return err
+	}
+
 	b.Header.RootHash = merkleTree.Hash
+
+	return err
 }

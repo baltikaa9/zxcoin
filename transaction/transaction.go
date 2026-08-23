@@ -5,7 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
+	"encoding/binary"
 	"math/big"
 	"zxcoin/coin"
 	"zxcoin/utxo"
@@ -27,33 +27,32 @@ type Transaction struct {
 	Outputs []coin.TxOutput
 }
 
-func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa.PrivateKey) Transaction {
+func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa.PrivateKey) (Transaction, error) {
 	t := Transaction{
 		Inputs:  inputs,
 		Outputs: outputs,
 	}
-	hash := t.Hash()
+	hash, err := t.Hash()
+
+	if err != nil {
+		return Transaction{}, err
+	}
 
 	for i := range t.Inputs {
 		t.Inputs[i].Sign(privateKey, hash)
 	}
 
-	return t
+	return t, nil
 }
 
-func (t Transaction) Hash() [32]byte {
-	tmp := t
-	tmp.Inputs = make([]TxInput, len(t.Inputs))
-	copy(tmp.Inputs, t.Inputs)
+func (t Transaction) Hash() ([32]byte, error) {
+	data, err := t.serialize()
 
-	for i := range tmp.Inputs {
-		tmp.Inputs[i].Signature = Signature{}
+	if err != nil {
+		return [32]byte{}, err
 	}
 
-	data := fmt.Sprintf("%v", tmp)
-	hash := sha256.Sum256([]byte(data))
-
-	return hash
+	return sha256.Sum256(data), nil
 }
 
 func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) error {
@@ -66,6 +65,13 @@ func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) 
 	in.Signature = Signature{r, s}
 
 	return nil
+}
+
+func (in *TxInput) serialize() []byte {
+	buf := in.TxID[:]
+	buf = binary.BigEndian.AppendUint64(buf, in.OutIndex)
+
+	return buf
 }
 
 func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
@@ -89,6 +95,14 @@ func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 }
 
 func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
+	hash, err := t.Hash()
+
+	if err != nil {
+		return err
+	}
+
+	emptySignature := Signature{}
+
 	for _, input := range t.Inputs {
 		key := utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}
 		utxo, exists := utxoDB[key]
@@ -97,7 +111,7 @@ func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 			return &UTXONotFoundError{input.TxID, input.OutIndex}
 		}
 
-		if (input.Signature == Signature{}) || (!input.Verify(utxo.Output.PublicKey, t.Hash())) {
+		if (input.Signature == emptySignature) || (!input.Verify(utxo.Output.PublicKey, hash)) {
 			return &InvalidSignatureError{input.TxID, input.OutIndex}
 		}
 	}
@@ -106,9 +120,15 @@ func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 }
 
 func (t Transaction) validateOutputs() error {
+	hash, err := t.Hash()
+
+	if err != nil {
+		return err
+	}
+
 	for i, output := range t.Outputs {
 		if output.Amount == 0 {
-			return &ZeroOutputError{TxID: t.Hash(), OutIndex: uint64(i)}
+			return &ZeroOutputError{TxID: hash, OutIndex: uint64(i)}
 		}
 	}
 
@@ -133,4 +153,26 @@ func (t Transaction) validateSum(utxoDB utxo.UTXODB) error {
 	}
 
 	return nil
+}
+
+func (t Transaction) serialize() ([]byte, error) {
+	buf := binary.BigEndian.AppendUint32(nil, uint32(len(t.Inputs)))
+
+	for _, input := range t.Inputs {
+		buf = append(buf, input.serialize()...)
+	}
+
+	buf = binary.BigEndian.AppendUint32(buf, uint32(len(t.Outputs)))
+
+	for _, output := range t.Outputs {
+		data, err := output.Serialize()
+
+		if err != nil {
+			return nil, err
+		}
+
+		buf = append(buf, data...)
+	}
+
+	return buf, nil
 }

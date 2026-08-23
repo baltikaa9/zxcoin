@@ -13,18 +13,24 @@ type Node struct {
 	Right *Node
 }
 
-func BuildMerkleTree(transactions []transaction.Transaction) Node {
+func BuildMerkleTree(transactions []transaction.Transaction) (Node, error) {
 	if len(transactions) == 0 {
-		return Node{}
+		return Node{}, nil
 	}
 
 	var leafs []Node
 
 	for i := range transactions {
-		leafs = append(leafs, Node{Hash: transactions[i].Hash()})
+		hash, err := transactions[i].Hash()
+
+		if err != nil {
+			return Node{}, err
+		}
+
+		leafs = append(leafs, Node{Hash: hash})
 	}
 
-	return buildLevel(leafs)[0]
+	return buildLevel(leafs)[0], nil
 }
 
 func buildLevel(nodes []Node) []Node {

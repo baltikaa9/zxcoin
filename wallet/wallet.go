@@ -40,9 +40,9 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount uint64, utxoDB utx
 		return transaction.Transaction{}, err
 	}
 
-	t := transaction.NewTransaction(inputs, w.createOutputs(to, amount, total), w.PrivateKey)
+	t, err := transaction.NewTransaction(inputs, w.createOutputs(to, amount, total), w.PrivateKey)
 
-	return t, nil
+	return t, err
 }
 
 func (w Wallet) selectInputs(amount uint64, utxoDB utxo.UTXODB) ([]transaction.TxInput, uint64, error) {

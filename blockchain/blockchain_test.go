@@ -60,19 +60,31 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
-	t1.Inputs[0].Sign(privateKey, t1.Hash())
+	t1Hash, err := t1.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t1.Inputs[0].Sign(privateKey, t1Hash)
 
 	t2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
-	t2.Inputs[0].Sign(privateKey, t2.Hash())
+	t2Hash, err := t2.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t2.Inputs[0].Sign(privateKey, t2Hash)
 
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
 
 	block := bc.newBlock([]transaction.Transaction{t1, t2}, publicKey)
 	block.Mine()
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -94,7 +106,11 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 		},
 	}
 
-	hash := tx.Hash()
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := range tx.Inputs {
 		tx.Inputs[i].Sign(privateKey, hash)
@@ -104,7 +120,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 
 	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
 	block.Mine()
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -124,12 +140,18 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 			{Amount: amount, PublicKey: publicKey},
 		},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
 
 	bc := Blockchain{currentDifficulty: 2, currentAward: 1}
 	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
 
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*InvalidNonceError](err); !ok {
 		t.Fatalf("ожидалась InvalidNonceError, получено: %v", err)
@@ -257,7 +279,13 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 	}
 
 	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
-	expectedHash := merkle.BuildMerkleTree([]transaction.Transaction{tx, coinbaseTx}).Hash
+	root, err := merkle.BuildMerkleTree([]transaction.Transaction{tx, coinbaseTx})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedHash := root.Hash
 
 	if block.Header.RootHash != expectedHash {
 		t.Fatalf("RootHash не совпадает. Ожидалось: %v, получено: %v", expectedHash, block.Header.RootHash)
@@ -291,7 +319,13 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("coinbase-транзакция не добавилась в utxodb")
 	}
 
-	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}, bc.currentAward, publicKey)
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: hash, OutIndex: 0}, bc.currentAward, publicKey)
 }
 
 func TestMineAndAddBlock_Success(t *testing.T) {
@@ -309,15 +343,27 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при добавлении первого блока: %v", err)
 	}
 
+	genesisTxHash, err := genesisBlock.Transactions[0].Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
-			{TxID: genesisBlock.Transactions[0].Hash(), OutIndex: 0},
+			{TxID: genesisTxHash, OutIndex: 0},
 		},
 		Outputs: []coin.TxOutput{
 			{Amount: bc.currentAward, PublicKey: otherPublicKey},
 		},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	txHash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, txHash)
 
 	err = mempool.Add(tx, utxoDB)
 
@@ -331,5 +377,5 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)
 	}
 
-	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: tx.Hash(), OutIndex: 0}, bc.currentAward, otherPublicKey)
+	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: txHash, OutIndex: 0}, bc.currentAward, otherPublicKey)
 }

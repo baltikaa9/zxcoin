@@ -33,7 +33,13 @@ func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.UTXODB) e
 		return err
 	}
 
-	m.transactions[transaction.Hash()] = transaction
+	hash, err := transaction.Hash()
+
+	if err != nil {
+		return err
+	}
+
+	m.transactions[hash] = transaction
 
 	return nil
 }

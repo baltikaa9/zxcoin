@@ -80,7 +80,13 @@ func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXO
 	}
 
 	for _, tx := range txs {
-		mempool.Remove(tx.Hash())
+		hash, err := tx.Hash()
+
+		if err != nil {
+			return block.Block{}, err
+		}
+
+		mempool.Remove(hash)
 	}
 
 	return newBlock, nil
@@ -107,7 +113,13 @@ func (bc *Blockchain) verifyPrevHash(block block.Block) error {
 }
 
 func (bc *Blockchain) verifyMerkleRoot(block block.Block) error {
-	if block.Header.RootHash != merkle.BuildMerkleTree(block.Transactions).Hash {
+	root, err := merkle.BuildMerkleTree(block.Transactions)
+
+	if err != nil {
+		return err
+	}
+
+	if block.Header.RootHash != root.Hash {
 		return &InvalidMerkleRootError{}
 	}
 
@@ -146,14 +158,22 @@ func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.UTXODB) 
 	return nil
 }
 
-func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) {
+func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) error {
 	for _, transaction := range block.Transactions {
+		hash, err := transaction.Hash()
+
+		if err != nil {
+			return err
+		}
+
 		for _, input := range transaction.Inputs {
 			delete(utxoDB, utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex})
 		}
 
 		for i, output := range transaction.Outputs {
-			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: uint64(i)}] = utxo.UTXOEntry{Output: output}
+			utxoDB[utxo.UTXOKey{TxID: hash, OutIndex: uint64(i)}] = utxo.UTXOEntry{Output: output}
 		}
 	}
+
+	return nil
 }

@@ -74,7 +74,11 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
 	}
 
-	hash := tx.Hash()
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 		t.Fatalf("неверная подпись входа транзакции")
@@ -140,7 +144,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
 	}
 
-	hash := tx.Hash()
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i, input := range inputs {
 		if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
@@ -208,7 +216,11 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.PublicKey)
 	}
 
-	hash := tx.Hash()
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 		t.Fatalf("неверная подпись входа транзакции")
@@ -284,7 +296,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.PublicKey)
 	}
 
-	hash := tx.Hash()
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i, input := range inputs {
 		if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {

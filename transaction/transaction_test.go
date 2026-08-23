@@ -17,9 +17,15 @@ func TestValidate_UTXONotFound(t *testing.T) {
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
 
-	err := tx.Validate(utxoDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
+
+	err = tx.Validate(utxoDB)
 
 	if _, ok := errors.AsType[*UTXONotFoundError](err); !ok {
 		t.Fatalf("ожидалась UTXONotFoundError, получено: %v", err)
@@ -36,9 +42,15 @@ func TestValidate_InvalidSignature(t *testing.T) {
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(attackerPrivateKey, tx.Hash())
+	hash, err := tx.Hash()
 
-	err := tx.Validate(utxoDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(attackerPrivateKey, hash)
+
+	err = tx.Validate(utxoDB)
 
 	if _, ok := errors.AsType[*InvalidSignatureError](err); !ok {
 		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
@@ -54,9 +66,15 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount * 2, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
 
-	err := tx.Validate(utxoDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
+
+	err = tx.Validate(utxoDB)
 
 	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
@@ -72,9 +90,15 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: 0, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
 
-	err := tx.Validate(utxoDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
+
+	err = tx.Validate(utxoDB)
 
 	if _, ok := errors.AsType[*ZeroOutputError](err); !ok {
 		t.Fatalf("ожидалась ZeroOutputError, получено: %v", err)
@@ -90,9 +114,15 @@ func TestValidate_Success(t *testing.T) {
 		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
 
-	err := tx.Validate(utxoDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
+
+	err = tx.Validate(utxoDB)
 
 	if err != nil {
 		t.Fatalf("ошибка при валидации: %v", err)

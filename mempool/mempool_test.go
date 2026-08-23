@@ -13,17 +13,23 @@ func TestAdd(t *testing.T) {
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: amount}},
+		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx.Inputs[0].Sign(privateKey, hash)
 	mempool := NewMempool()
-	err := mempool.Add(tx, utxoDB)
+	err = mempool.Add(tx, utxoDB)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
 	}
 
-	_, ok := mempool.transactions[tx.Hash()]
+	_, ok := mempool.transactions[hash]
 
 	if !ok {
 		t.Fatalf("транзакция не добавилась")
@@ -31,13 +37,20 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
+	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 42}},
+		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
-	mempool := Mempool{transactions: map[[32]byte]transaction.Transaction{tx.Hash(): tx}}
-	mempool.Remove(tx.Hash())
-	_, ok := mempool.transactions[tx.Hash()]
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mempool := Mempool{transactions: map[[32]byte]transaction.Transaction{hash: tx}}
+	mempool.Remove(hash)
+	_, ok := mempool.transactions[hash]
 
 	if ok {
 		t.Fatalf("транзакция не удалилась")
@@ -45,17 +58,30 @@ func TestRemove(t *testing.T) {
 }
 
 func TestGetPending_LessThanLimit(t *testing.T) {
+	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 42}},
+		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
+	tx1Hash, err := tx1.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tx2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 1}},
-		Outputs: []coin.TxOutput{{Amount: 42}},
+		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
+	tx2Hash, err := tx2.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	txMap := map[[32]byte]transaction.Transaction{
-		tx1.Hash(): tx1,
-		tx2.Hash(): tx2,
+		tx1Hash: tx1,
+		tx2Hash: tx2,
 	}
 	mempool := Mempool{transactions: txMap}
 	txs := mempool.GetPending(3)
@@ -66,17 +92,30 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 }
 
 func TestGetPending_MoreThanLimit(t *testing.T) {
+	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: 42}},
+		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
+	tx1Hash, err := tx1.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tx2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 1}},
-		Outputs: []coin.TxOutput{{Amount: 42}},
+		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
+	tx2Hash, err := tx2.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mempool := Mempool{transactions: map[[32]byte]transaction.Transaction{
-		tx1.Hash(): tx1,
-		tx2.Hash(): tx2,
+		tx1Hash: tx1,
+		tx2Hash: tx2,
 	}}
 	limit := 1
 	txs := mempool.GetPending(limit)
