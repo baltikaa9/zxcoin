@@ -3,8 +3,8 @@ package wallet
 import "fmt"
 
 type InsufficientFundsError struct {
-	Available int
-	Requested int
+	Available uint64
+	Requested uint64
 }
 
 func (e *InsufficientFundsError) Error() string {

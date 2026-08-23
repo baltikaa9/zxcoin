@@ -15,10 +15,10 @@ import (
 type Blockchain struct {
 	blocks            []block.Block
 	currentDifficulty int
-	currentAward      int
+	currentAward      uint64
 }
 
-func NewBlockchain(difficulty int, award int) Blockchain {
+func NewBlockchain(difficulty int, award uint64) Blockchain {
 	return Blockchain{currentDifficulty: difficulty, currentAward: award}
 }
 

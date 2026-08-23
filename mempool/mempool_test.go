@@ -9,7 +9,7 @@ import (
 
 func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},

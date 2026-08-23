@@ -12,7 +12,7 @@ import (
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 	myWallet := NewWallet()
 	otherWallet := NewWallet()
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2, utxoDB)
 
@@ -24,7 +24,7 @@ func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 	myWallet := NewWallet()
 	otherWallet := NewWallet()
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey)
 	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
 
@@ -40,7 +40,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount, utxoDB)
 
@@ -96,7 +96,7 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		TxID:     [32]byte{},
 		OutIndex: 1,
 	}
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	utxoDB[key1] = utxo.UTXOEntry{
 		Output: coin.TxOutput{
@@ -164,8 +164,8 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
-	amount := 5
-	payment := 4
+	amount := uint64(5)
+	payment := uint64(4)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment, utxoDB)
 
@@ -230,8 +230,8 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		TxID:     [32]byte{},
 		OutIndex: 1,
 	}
-	amount := 5
-	payment := 4
+	amount := uint64(5)
+	payment := uint64(4)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
 	utxoDB[key1] = utxo.UTXOEntry{
 		Output: coin.TxOutput{

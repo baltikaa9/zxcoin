@@ -29,7 +29,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 func TestValidate_InvalidSignature(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	attackerPrivateKey, _ := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
@@ -47,7 +47,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 func TestValidate_InsufficientFunds(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
@@ -65,7 +65,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{
@@ -76,32 +76,14 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 	err := tx.Validate(utxoDB)
 
-	if _, ok := errors.AsType[*NonPositiveOutputError](err); !ok {
-		t.Fatalf("ожидалась NonPositiveOutputError, получено: %v", err)
-	}
-}
-
-func TestValidate_NonPositiveOutputNegative(t *testing.T) {
-	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
-
-	tx := Transaction{
-		Inputs:  []TxInput{{TxID: [32]byte{}, OutIndex: 0}},
-		Outputs: []coin.TxOutput{{Amount: -amount, PublicKey: publicKey}},
-	}
-	tx.Inputs[0].Sign(privateKey, tx.Hash())
-
-	err := tx.Validate(utxoDB)
-
-	if _, ok := errors.AsType[*NonPositiveOutputError](err); !ok {
-		t.Fatalf("ожидалась NonPositiveOutputError, получено: %v", err)
+	if _, ok := errors.AsType[*ZeroOutputError](err); !ok {
+		t.Fatalf("ожидалась ZeroOutputError, получено: %v", err)
 	}
 }
 
 func TestValidate_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := Transaction{

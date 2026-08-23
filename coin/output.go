@@ -4,6 +4,6 @@ package coin
 import "crypto/ecdsa"
 
 type TxOutput struct {
-	Amount    int
+	Amount    uint64
 	PublicKey *ecdsa.PublicKey
 }

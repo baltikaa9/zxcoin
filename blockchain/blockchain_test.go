@@ -30,7 +30,7 @@ func mineGenesisBlock(t *testing.T, bc *Blockchain, utxoDB utxo.UTXODB) block.Bl
 	return genesisBlock
 }
 
-func assertUTXO(t *testing.T, utxoDB utxo.UTXODB, key utxo.UTXOKey, expectedAmount int, expectedOwner *ecdsa.PublicKey) {
+func assertUTXO(t *testing.T, utxoDB utxo.UTXODB, key utxo.UTXOKey, expectedAmount uint64, expectedOwner *ecdsa.PublicKey) {
 	t.Helper()
 	entry, existed := utxoDB[key]
 
@@ -53,7 +53,7 @@ func assertUTXO(t *testing.T, utxoDB utxo.UTXODB, key utxo.UTXOKey, expectedAmou
 
 func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	t1 := transaction.Transaction{
@@ -81,7 +81,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := transaction.Transaction{
@@ -113,7 +113,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := 5
+	amount := uint64(5)
 	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
 
 	tx := transaction.Transaction{

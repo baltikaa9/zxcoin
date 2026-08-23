@@ -107,8 +107,8 @@ func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 
 func (t Transaction) validateOutputs() error {
 	for i, output := range t.Outputs {
-		if output.Amount <= 0 {
-			return &NonPositiveOutputError{TxID: t.Hash(), OutIndex: i, Value: output.Amount}
+		if output.Amount == 0 {
+			return &ZeroOutputError{TxID: t.Hash(), OutIndex: i}
 		}
 	}
 
@@ -116,8 +116,8 @@ func (t Transaction) validateOutputs() error {
 }
 
 func (t Transaction) validateSum(utxoDB utxo.UTXODB) error {
-	inputAmount := 0
-	outputAmount := 0
+	inputAmount := uint64(0)
+	outputAmount := uint64(0)
 
 	for _, input := range t.Inputs {
 		utxo := utxoDB[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}]

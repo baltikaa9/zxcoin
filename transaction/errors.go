@@ -21,20 +21,19 @@ func (e *InvalidSignatureError) Error() string {
 }
 
 type InsufficientFundsError struct {
-	Input  int
-	Output int
+	Input  uint64
+	Output uint64
 }
 
 func (e *InsufficientFundsError) Error() string {
 	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }
 
-type NonPositiveOutputError struct {
+type ZeroOutputError struct {
 	TxID     [32]byte
 	OutIndex int
-	Value    int
 }
 
-func (e *NonPositiveOutputError) Error() string {
-	return fmt.Sprintf("неположительное значение выхода %v транзакции %v: %v", e.OutIndex, e.TxID, e.Value)
+func (e *ZeroOutputError) Error() string {
+	return fmt.Sprintf("нулевое значение выхода %v транзакции %v", e.OutIndex, e.TxID)
 }

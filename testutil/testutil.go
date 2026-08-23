@@ -21,7 +21,7 @@ func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 	return privateKey, &privateKey.PublicKey
 }
 
-func GenerateSingleUtxo(t *testing.T, amount int, publicKey *ecdsa.PublicKey) utxo.UTXODB {
+func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey) utxo.UTXODB {
 	return utxo.UTXODB{
 		utxo.UTXOKey{
 			TxID:     [32]byte{},

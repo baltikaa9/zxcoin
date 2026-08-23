@@ -29,7 +29,7 @@ func NewWallet() Wallet {
 	return Wallet{privateKey, publicKey}
 }
 
-func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.UTXODB) (transaction.Transaction, error) {
+func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount uint64, utxoDB utxo.UTXODB) (transaction.Transaction, error) {
 	inputs, total, err := w.selectInputs(amount, utxoDB)
 
 	if err != nil {
@@ -45,9 +45,9 @@ func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount int, utxoDB utxo.U
 	return t, nil
 }
 
-func (w Wallet) selectInputs(amount int, utxoDB utxo.UTXODB) ([]transaction.TxInput, int, error) {
+func (w Wallet) selectInputs(amount uint64, utxoDB utxo.UTXODB) ([]transaction.TxInput, uint64, error) {
 	inputs := make([]transaction.TxInput, 0)
-	total := 0
+	total := uint64(0)
 
 	for key, entry := range utxoDB {
 		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved() {
@@ -93,7 +93,7 @@ func (w Wallet) reserveInputs(inputs []transaction.TxInput, utxoDB utxo.UTXODB) 
 	return nil
 }
 
-func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount int, total int) []coin.TxOutput {
+func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount uint64, total uint64) []coin.TxOutput {
 	outputs := []coin.TxOutput{{Amount: amount, PublicKey: to}}
 	change := total - amount
 
