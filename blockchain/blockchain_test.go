@@ -20,7 +20,12 @@ func mineGenesisBlock(t *testing.T, bc *Blockchain, utxoDB utxo.UTXODB) block.Bl
 		Transactions: []transaction.Transaction{},
 		Difficulty:   bc.currentDifficulty,
 	}
-	genesisBlock.CalculateRootHash()
+	err := genesisBlock.CalculateRootHash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	genesisBlock.Mine()
 
 	if err := bc.AddBlock(genesisBlock, utxoDB); err != nil {
@@ -82,7 +87,12 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
 
-	block := bc.newBlock([]transaction.Transaction{t1, t2}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{t1, t2}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block.Mine()
 	err = bc.AddBlock(block, utxoDB)
 
@@ -118,7 +128,12 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
 
-	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block.Mine()
 	err = bc.AddBlock(block, utxoDB)
 
@@ -149,7 +164,11 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 	tx.Inputs[0].Sign(privateKey, hash)
 
 	bc := Blockchain{currentDifficulty: 2, currentAward: 1}
-	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = bc.AddBlock(block, utxoDB)
 
@@ -171,9 +190,14 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		Transactions: []transaction.Transaction{},
 		Difficulty:   bc.currentDifficulty,
 	}
-	block.CalculateRootHash()
+	err := block.CalculateRootHash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block.Mine()
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*InvalidPrevHashError](err); !ok {
 		t.Fatalf("ожидалась InvalidPrevHashError, получено: %v", err)
@@ -218,9 +242,14 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		Difficulty: bc.currentDifficulty,
 	}
 
-	block.CalculateRootHash()
+	err := block.CalculateRootHash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block.Mine()
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if _, ok := errors.AsType[*MoreOneCoinbaseError](err); !ok {
 		t.Fatalf("ожидалась MoreOneCoinbaseError, получено: %v", err)
@@ -230,7 +259,11 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 func TestNewBlock_CoinbaseExisted(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	block := bc.newBlock([]transaction.Transaction{}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if len(block.Transactions) < 1 {
 		t.Fatalf("отсутствует coinbase-транзакция")
@@ -259,7 +292,12 @@ func TestNewBlock_ValidPrevHash(t *testing.T) {
 	utxoDB := utxo.UTXODB{}
 
 	genesisBlock := mineGenesisBlock(t, &bc, utxoDB)
-	block := bc.newBlock([]transaction.Transaction{}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedHash := genesisBlock.Header.Hash()
 
 	if block.Header.PrevHash != expectedHash {
@@ -278,7 +316,12 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 		Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}},
 	}
 
-	block := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+	block, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	root, err := merkle.BuildMerkleTree([]transaction.Transaction{tx, coinbaseTx})
 
 	if err != nil {
@@ -306,10 +349,15 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		Transactions: []transaction.Transaction{tx},
 		Difficulty:   bc.currentDifficulty,
 	}
-	block.CalculateRootHash()
+	err := block.CalculateRootHash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	block.Mine()
 
-	err := bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, utxoDB)
 
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
@@ -335,9 +383,14 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 	utxoDB := utxo.UTXODB{}
 	mempool := mempool.NewMempool()
 
-	genesisBlock := bc.newBlock([]transaction.Transaction{}, publicKey)
+	genesisBlock, err := bc.newBlock([]transaction.Transaction{}, publicKey)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	genesisBlock.Mine()
-	err := bc.AddBlock(genesisBlock, utxoDB)
+	err = bc.AddBlock(genesisBlock, utxoDB)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении первого блока: %v", err)

@@ -22,7 +22,7 @@ func NewBlockchain(difficulty uint64, award uint64) Blockchain {
 	return Blockchain{currentDifficulty: difficulty, currentAward: award}
 }
 
-func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) block.Block {
+func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) (block.Block, error) {
 	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: creator}}}
 
 	prevHash := [32]byte{}
@@ -31,7 +31,7 @@ func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *
 		prevHash = bc.blocks[len(bc.blocks)-1].Header.Hash()
 	}
 
-	block := block.Block{
+	newBlock := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  prevHash,
 			Nonce:     0,
@@ -41,9 +41,13 @@ func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *
 		Difficulty:   bc.currentDifficulty,
 	}
 
-	block.CalculateRootHash()
+	err := newBlock.CalculateRootHash()
 
-	return block
+	if err != nil {
+		return block.Block{}, err
+	}
+
+	return newBlock, nil
 }
 
 func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
@@ -72,7 +76,12 @@ func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
 	txs := mempool.GetPending(transactionLimit)
 
-	newBlock := bc.newBlock(txs, creator)
+	newBlock, err := bc.newBlock(txs, creator)
+
+	if err != nil {
+		return block.Block{}, err
+	}
+
 	newBlock.Mine()
 
 	if err := bc.AddBlock(newBlock, utxoDB); err != nil {
