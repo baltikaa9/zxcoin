@@ -13,7 +13,7 @@ import (
 
 type TxInput struct {
 	TxID      [32]byte
-	OutIndex  int
+	OutIndex  uint64
 	Signature Signature
 }
 
@@ -108,7 +108,7 @@ func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 func (t Transaction) validateOutputs() error {
 	for i, output := range t.Outputs {
 		if output.Amount == 0 {
-			return &ZeroOutputError{TxID: t.Hash(), OutIndex: i}
+			return &ZeroOutputError{TxID: t.Hash(), OutIndex: uint64(i)}
 		}
 	}
 

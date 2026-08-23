@@ -7,7 +7,7 @@ import (
 
 type UTXOKey struct {
 	TxID     [32]byte
-	OutIndex int
+	OutIndex uint64
 }
 
 type UTXOEntry struct {

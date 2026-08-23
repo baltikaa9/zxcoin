@@ -4,7 +4,7 @@ import "fmt"
 
 type DoubleSpendError struct {
 	TxID     [32]byte
-	OutIndex int
+	OutIndex uint64
 }
 
 func (e *DoubleSpendError) Error() string {
@@ -13,7 +13,7 @@ func (e *DoubleSpendError) Error() string {
 
 type InvalidNonceError struct {
 	BlockHash  [32]byte
-	Difficulty int
+	Difficulty uint64
 }
 
 func (e *InvalidNonceError) Error() string {

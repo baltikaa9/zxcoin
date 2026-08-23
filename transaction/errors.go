@@ -4,7 +4,7 @@ import "fmt"
 
 type UTXONotFoundError struct {
 	TxID     [32]byte
-	OutIndex int
+	OutIndex uint64
 }
 
 func (e *UTXONotFoundError) Error() string {
@@ -13,7 +13,7 @@ func (e *UTXONotFoundError) Error() string {
 
 type InvalidSignatureError struct {
 	TxID     [32]byte
-	OutIndex int
+	OutIndex uint64
 }
 
 func (e *InvalidSignatureError) Error() string {
@@ -31,7 +31,7 @@ func (e *InsufficientFundsError) Error() string {
 
 type ZeroOutputError struct {
 	TxID     [32]byte
-	OutIndex int
+	OutIndex uint64
 }
 
 func (e *ZeroOutputError) Error() string {

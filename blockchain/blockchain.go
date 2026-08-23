@@ -14,11 +14,11 @@ import (
 
 type Blockchain struct {
 	blocks            []block.Block
-	currentDifficulty int
+	currentDifficulty uint64
 	currentAward      uint64
 }
 
-func NewBlockchain(difficulty int, award uint64) Blockchain {
+func NewBlockchain(difficulty uint64, award uint64) Blockchain {
 	return Blockchain{currentDifficulty: difficulty, currentAward: award}
 }
 
@@ -153,7 +153,7 @@ func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) {
 		}
 
 		for i, output := range transaction.Outputs {
-			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: i}] = utxo.UTXOEntry{Output: output}
+			utxoDB[utxo.UTXOKey{TxID: transaction.Hash(), OutIndex: uint64(i)}] = utxo.UTXOEntry{Output: output}
 		}
 	}
 }

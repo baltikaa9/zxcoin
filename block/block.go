@@ -19,7 +19,7 @@ type BlockHeader struct {
 type Block struct {
 	Header       BlockHeader
 	Transactions []transaction.Transaction
-	Difficulty   int
+	Difficulty   uint64
 }
 
 func (bh BlockHeader) Hash() [32]byte {
