@@ -18,6 +18,8 @@ type Wallet struct {
 func NewWallet() Wallet {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
+	// Ошибка генерации ключа означает неисправность криптографической подсистемы,
+	// при которой продолжение работы невозможно.
 	if err != nil {
 		panic(err)
 	}
