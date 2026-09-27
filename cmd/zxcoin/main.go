@@ -3,53 +3,67 @@ package main
 import (
 	"fmt"
 	"zxcoin/blockchain"
-	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/utxo"
+	"zxcoin/utxo/inmemory"
 	"zxcoin/wallet"
 )
 
 func main() {
-	myWallet := wallet.NewWallet()
-	otherWallet := wallet.NewWallet()
+	repo := inmemory.NewRepository()
+	tracker := wallet.NewReservationTracker()
+
+	myWallet := wallet.NewWallet(tracker, repo)
+	otherWallet := wallet.NewWallet(tracker, repo)
 
 	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
-	utxoDB := utxo.UTXODB{
-		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 0}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 5, PublicKey: myWallet.PublicKey}},
-		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 1}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 3, PublicKey: myWallet.PublicKey}},
-		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 2}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 11, PublicKey: myWallet.PublicKey}},
-		utxo.UTXOKey{TxID: [32]byte{}, OutIndex: 3}: utxo.UTXOEntry{Output: coin.TxOutput{Amount: 10, PublicKey: myWallet.PublicKey}},
+	utxos := []utxo.UTXO{
+		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 0}, Amount: 5, Owner: myWallet.PublicKey},
+		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 1}, Amount: 3, Owner: myWallet.PublicKey},
+		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 2}, Amount: 11, Owner: myWallet.PublicKey},
+		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 3}, Amount: 10, Owner: myWallet.PublicKey},
+	}
+	for _, u := range utxos {
+		err := repo.Save(u)
+
+		if err != nil {
+			panic(err)
+		}
 	}
 	mp := mempool.NewMempool()
 
-	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10, utxoDB)
+	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
 
 	if err != nil {
 		panic(err)
 	}
 
-	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
+	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1)
 
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("было\n%v\n\n", utxoDB)
+	my, _ := repo.FindByOwner(myWallet.PublicKey)
+	other, _ := repo.FindByOwner(otherWallet.PublicKey)
+	fmt.Printf("было\nMy: %v\nOther: %v\n\n", my, other)
 
-	if err := mp.Add(t1, utxoDB); err != nil {
+	if err := mp.Add(t1, repo); err != nil {
 		panic(err)
 	}
 
-	if err := mp.Add(t2, utxoDB); err != nil {
+	if err := mp.Add(t2, repo); err != nil {
 		panic(err)
 	}
 
 	bc := blockchain.NewBlockchain(2, 42)
 
-	if _, err := bc.MineAndAddBlock(mp, utxoDB, 3, myWallet.PublicKey); err != nil {
+	if _, err := bc.MineAndAddBlock(mp, repo, 3, myWallet.PublicKey); err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("стало\n%v\n", utxoDB)
+	my, _ = repo.FindByOwner(myWallet.PublicKey)
+	other, _ = repo.FindByOwner(otherWallet.PublicKey)
+	fmt.Printf("стало\nMy: %v\nOther: %v\n\n", my, other)
 }

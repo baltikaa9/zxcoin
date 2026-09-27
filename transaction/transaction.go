@@ -12,8 +12,7 @@ import (
 )
 
 type TxInput struct {
-	TxID      [32]byte
-	OutIndex  uint64
+	ID        utxo.UTXOID
 	Signature Signature
 }
 
@@ -68,8 +67,8 @@ func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) 
 }
 
 func (in *TxInput) serialize() []byte {
-	buf := in.TxID[:]
-	buf = binary.BigEndian.AppendUint64(buf, in.OutIndex)
+	buf := in.ID.TxID[:]
+	buf = binary.BigEndian.AppendUint64(buf, in.ID.OutIndex)
 
 	return buf
 }
@@ -78,7 +77,7 @@ func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
 	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
 }
 
-func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
+func (t Transaction) Validate(utxoDB utxo.Repository) error {
 	if err := t.validateInputs(utxoDB); err != nil {
 		return err
 	}
@@ -94,7 +93,7 @@ func (t Transaction) Validate(utxoDB utxo.UTXODB) error {
 	return nil
 }
 
-func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
+func (t Transaction) validateInputs(utxoDB utxo.Repository) error {
 	hash, err := t.Hash()
 
 	if err != nil {
@@ -104,11 +103,10 @@ func (t Transaction) validateInputs(utxoDB utxo.UTXODB) error {
 	emptySignature := Signature{}
 
 	for _, input := range t.Inputs {
-		key := utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}
-		utxo, exists := utxoDB[key]
+		utxo, exists, err := utxoDB.FindByID(input.ID)
 
-		if !exists {
-			return &UTXONotFoundError{input.TxID, input.OutIndex}
+		if err != nil {
+			return err
 		}
 
 		if (input.Signature == emptySignature) || (!input.Verify(utxo.Output.PublicKey, hash)) {
@@ -135,13 +133,13 @@ func (t Transaction) validateOutputs() error {
 	return nil
 }
 
-func (t Transaction) validateSum(utxoDB utxo.UTXODB) error {
+func (t Transaction) validateSum(utxoDB utxo.Repository) error {
 	inputAmount := uint64(0)
 	outputAmount := uint64(0)
 
 	for _, input := range t.Inputs {
-		utxo := utxoDB[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}]
-		inputAmount += utxo.Output.Amount
+		utxo, _, _ := utxoDB.FindByID(input.ID)
+		inputAmount += utxo.Amount
 	}
 
 	for _, output := range t.Outputs {

@@ -50,7 +50,7 @@ func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *
 	return newBlock, nil
 }
 
-func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
+func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.Repository) error {
 	if err := bc.verifyProofOfWork(block); err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.UTXODB) error {
 	return nil
 }
 
-func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.UTXODB, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
+func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.Repository, transactionLimit int, creator *ecdsa.PublicKey) (block.Block, error) {
 	txs := mempool.GetPending(transactionLimit)
 
 	newBlock, err := bc.newBlock(txs, creator)
@@ -135,8 +135,8 @@ func (bc *Blockchain) verifyMerkleRoot(block block.Block) error {
 	return nil
 }
 
-func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.UTXODB) error {
-	spentInThisBlock := make(map[utxo.UTXOKey]bool)
+func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.Repository) error {
+	spentInThisBlock := make(map[utxo.UTXOID]bool)
 	foundCoinbase := false
 
 	for _, transaction := range block.Transactions {
@@ -160,14 +160,14 @@ func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.UTXODB) 
 				return &DoubleSpendError{input.TxID, input.OutIndex}
 			}
 
-			spentInThisBlock[key] = true
+			spentInThisBlock[input.ID] = true
 		}
 	}
 
 	return nil
 }
 
-func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) error {
+func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.Repository) error {
 	for _, transaction := range block.Transactions {
 		hash, err := transaction.Hash()
 
@@ -176,11 +176,21 @@ func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.UTXODB) error {
 		}
 
 		for _, input := range transaction.Inputs {
-			delete(utxoDB, utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex})
+			if err := utxoDB.Delete(input.ID); err != nil {
+				return err
+			}
 		}
 
 		for i, output := range transaction.Outputs {
-			utxoDB[utxo.UTXOKey{TxID: hash, OutIndex: uint64(i)}] = utxo.UTXOEntry{Output: output}
+			err := utxoDB.Save(utxo.UTXO{
+				ID:     utxo.UTXOID{TxID: hash, OutIndex: uint64(i)},
+				Amount: output.Amount,
+				Owner:  output.PublicKey,
+			})
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 

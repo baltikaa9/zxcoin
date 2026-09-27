@@ -28,7 +28,7 @@ func (m *Mempool) GetPending(limit int) []transaction.Transaction {
 	return result
 }
 
-func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.UTXODB) error {
+func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.Repository) error {
 	if err := transaction.Validate(utxoDB); err != nil {
 		return err
 	}

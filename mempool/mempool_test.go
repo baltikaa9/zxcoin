@@ -5,14 +5,17 @@ import (
 	"zxcoin/coin"
 	"zxcoin/testutil"
 	"zxcoin/transaction"
+	"zxcoin/utxo"
+	"zxcoin/utxo/inmemory"
 )
 
 func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -23,7 +26,7 @@ func TestAdd(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, hash)
 	mempool := NewMempool()
-	err = mempool.Add(tx, utxoDB)
+	err = mempool.Add(tx, repo)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
@@ -39,7 +42,7 @@ func TestAdd(t *testing.T) {
 func TestRemove(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -60,7 +63,7 @@ func TestRemove(t *testing.T) {
 func TestGetPending_LessThanLimit(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
 	tx1Hash, err := tx1.Hash()
@@ -70,7 +73,7 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 	}
 
 	tx2 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 1}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{OutIndex: 1}}},
 		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
 	tx2Hash, err := tx2.Hash()
@@ -94,7 +97,7 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 func TestGetPending_MoreThanLimit(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
 	tx1Hash, err := tx1.Hash()
@@ -104,7 +107,7 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 	}
 
 	tx2 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 1}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{OutIndex: 1}}},
 		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
 	}
 	tx2Hash, err := tx2.Hash()

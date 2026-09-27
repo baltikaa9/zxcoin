@@ -6,7 +6,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"testing"
-	"zxcoin/coin"
 	"zxcoin/utxo"
 )
 
@@ -21,16 +20,16 @@ func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 	return privateKey, &privateKey.PublicKey
 }
 
-func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey) utxo.UTXODB {
-	return utxo.UTXODB{
-		utxo.UTXOKey{
-			TxID:     [32]byte{},
-			OutIndex: 0,
-		}: utxo.UTXOEntry{
-			Output: coin.TxOutput{
-				Amount:    amount,
-				PublicKey: publicKey,
-			},
-		},
+func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey, repo utxo.Repository) {
+	t.Helper()
+
+	u := utxo.UTXO{
+		ID:     utxo.UTXOID{},
+		Amount: amount,
+		Owner:  publicKey,
+	}
+
+	if err := repo.Save(u); err != nil {
+		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
 }

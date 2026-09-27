@@ -4,17 +4,21 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"testing"
-	"zxcoin/coin"
 	"zxcoin/testutil"
 	"zxcoin/utxo"
+	"zxcoin/utxo/inmemory"
 )
 
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
-	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2, utxoDB)
+	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
+	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2)
 
 	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
@@ -22,11 +26,15 @@ func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 }
 
 func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey)
-	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1, utxoDB)
+	testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey, repo)
+	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1)
 
 	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
@@ -34,15 +42,19 @@ func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 }
 
 func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
-	key := utxo.UTXOKey{
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
+	id := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
-	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount, utxoDB)
+	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
+	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании транзакции: %v", err)
@@ -62,8 +74,8 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 	input := inputs[0]
 	output := outputs[0]
 
-	if input.TxID != key.TxID || input.OutIndex != key.OutIndex {
-		t.Fatalf("неверно заполнен вход транзакции. Ожидалось %v - %v, получено %v - %v", key.TxID, key.OutIndex, input.TxID, input.OutIndex)
+	if input.ID != id {
+		t.Fatalf("неверно заполнен вход транзакции. Ожидалось %v - %v, получено %v - %v", id.TxID, id.OutIndex, input.ID.TxID, input.ID.OutIndex)
 	}
 
 	if output.Amount != amount {
@@ -84,31 +96,36 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
-	if !utxoDB[key].Reserved() {
+	if !tracker.IsReserved(id) {
 		t.Fatalf("отсутсвует резервация utxo")
 	}
 }
 
 func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
-	key0 := utxo.UTXOKey{
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
+	id0 := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
-	key1 := utxo.UTXOKey{
+	id1 := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 1,
 	}
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
-	utxoDB[key1] = utxo.UTXOEntry{
-		Output: coin.TxOutput{
-			Amount:    amount,
-			PublicKey: myWallet.PublicKey,
-		},
+	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
+	if err := repo.Save(utxo.UTXO{
+		ID:     id1,
+		Amount: amount,
+		Owner:  myWallet.PublicKey,
+	}); err != nil {
+		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
-	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2, utxoDB)
+	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании транзакции: %v", err)
@@ -126,13 +143,14 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	}
 
 	output := outputs[0]
-	keysExist := map[utxo.UTXOKey]bool{}
+	keysExist := map[utxo.UTXOID]bool{}
 
 	for _, input := range inputs {
-		keysExist[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}] = true
+		keysExist[input.ID] = true
+
 	}
 
-	if !keysExist[key0] || !keysExist[key1] {
+	if !keysExist[id0] || !keysExist[id1] {
 		t.Fatalf("не все ожидаемые входы присутствуют в транзакции: %v", keysExist)
 	}
 
@@ -156,26 +174,30 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		}
 	}
 
-	if !utxoDB[key0].Reserved() {
-		t.Fatalf("отсутсвует резервация 0 utxo")
+	if !tracker.IsReserved(id0) {
+		t.Fatalf("отсутствует резервация 0 utxo")
 	}
 
-	if !utxoDB[key1].Reserved() {
-		t.Fatalf("отсутсвует резервация 1 utxo")
+	if !tracker.IsReserved(id1) {
+		t.Fatalf("отсутствует резервация 1 utxo")
 	}
 }
 
 func TestCreateTransaction_SuccessChange(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
-	key := utxo.UTXOKey{
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
+	id := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
 	amount := uint64(5)
 	payment := uint64(4)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
-	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment, utxoDB)
+	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
+	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании транзакции: %v", err)
@@ -196,8 +218,8 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	output := outputs[0]
 	change := outputs[1]
 
-	if input.TxID != key.TxID || input.OutIndex != key.OutIndex {
-		t.Fatalf("неверно заполнен 1 вход транзакции. Ожидалось %v - %v, получено %v - %v", key.TxID, key.OutIndex, input.TxID, input.OutIndex)
+	if input.ID != id {
+		t.Fatalf("неверно заполнен 1 вход транзакции. Ожидалось %v - %v, получено %v - %v", id.TxID, id.OutIndex, input.ID.TxID, input.ID.OutIndex)
 	}
 
 	if output.Amount != payment {
@@ -226,32 +248,37 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
-	if !utxoDB[key].Reserved() {
+	if !tracker.IsReserved(id) {
 		t.Fatalf("отсутсвует резервация utxo")
 	}
 }
 
 func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
-	myWallet := NewWallet()
-	otherWallet := NewWallet()
-	key0 := utxo.UTXOKey{
+	repo := inmemory.NewRepository()
+	tracker := NewReservationTracker()
+
+	myWallet := NewWallet(tracker, repo)
+	otherWallet := NewWallet(tracker, repo)
+
+	id0 := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 0,
 	}
-	key1 := utxo.UTXOKey{
+	id1 := utxo.UTXOID{
 		TxID:     [32]byte{},
 		OutIndex: 1,
 	}
 	amount := uint64(5)
 	payment := uint64(4)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey)
-	utxoDB[key1] = utxo.UTXOEntry{
-		Output: coin.TxOutput{
-			Amount:    amount,
-			PublicKey: myWallet.PublicKey,
-		},
+	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
+	if err := repo.Save(utxo.UTXO{
+		ID:     id1,
+		Amount: amount,
+		Owner:  myWallet.PublicKey,
+	}); err != nil {
+		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
-	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment*2, utxoDB)
+	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment*2)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании транзакции: %v", err)
@@ -270,13 +297,13 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 
 	output := outputs[0]
 	change := outputs[1]
-	keysExist := map[utxo.UTXOKey]bool{}
+	keysExist := map[utxo.UTXOID]bool{}
 
 	for _, input := range inputs {
-		keysExist[utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}] = true
+		keysExist[input.ID] = true
 	}
 
-	if !keysExist[key0] || !keysExist[key1] {
+	if !keysExist[id0] || !keysExist[id1] {
 		t.Fatalf("не все ожидаемые входы присутствуют в транзакции: %v", keysExist)
 	}
 
@@ -308,11 +335,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		}
 	}
 
-	if !utxoDB[key0].Reserved() {
+	if !tracker.IsReserved(id0) {
 		t.Fatalf("отсутсвует резервация 0 utxo")
 	}
 
-	if !utxoDB[key1].Reserved() {
+	if !tracker.IsReserved(id1) {
 		t.Fatalf("отсутсвует резервация 1 utxo")
 	}
 }

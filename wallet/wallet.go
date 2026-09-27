@@ -11,11 +11,13 @@ import (
 )
 
 type Wallet struct {
-	PrivateKey *ecdsa.PrivateKey
-	PublicKey  *ecdsa.PublicKey
+	PrivateKey         *ecdsa.PrivateKey
+	PublicKey          *ecdsa.PublicKey
+	reservationTracker *ReservationTracker
+	utxoRepo           utxo.Repository
 }
 
-func NewWallet() Wallet {
+func NewWallet(tracker *ReservationTracker, utxoRepo utxo.Repository) Wallet {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	// Ошибка генерации ключа означает неисправность криптографической подсистемы,
@@ -24,38 +26,42 @@ func NewWallet() Wallet {
 		panic(err)
 	}
 
-	publicKey := &privateKey.PublicKey
-
-	return Wallet{privateKey, publicKey}
+	return Wallet{
+		PrivateKey:         privateKey,
+		PublicKey:          &privateKey.PublicKey,
+		reservationTracker: tracker,
+		utxoRepo:           utxoRepo,
+	}
 }
 
-func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount uint64, utxoDB utxo.UTXODB) (transaction.Transaction, error) {
-	inputs, total, err := w.selectInputs(amount, utxoDB)
+func (w Wallet) CreateTransaction(to *ecdsa.PublicKey, amount uint64) (transaction.Transaction, error) {
+	inputs, total, err := w.selectInputs(amount)
 
 	if err != nil {
 		return transaction.Transaction{}, err
 	}
 
-	if err := w.reserveInputs(inputs, utxoDB); err != nil {
-		return transaction.Transaction{}, err
-	}
+	w.reserveInputs(inputs)
 
 	t, err := transaction.NewTransaction(inputs, w.createOutputs(to, amount, total), w.PrivateKey)
 
 	return t, err
 }
 
-func (w Wallet) selectInputs(amount uint64, utxoDB utxo.UTXODB) ([]transaction.TxInput, uint64, error) {
+func (w Wallet) selectInputs(amount uint64) ([]transaction.TxInput, uint64, error) {
 	inputs := make([]transaction.TxInput, 0)
 	total := uint64(0)
 
-	for key, entry := range utxoDB {
-		if entry.Output.PublicKey.Equal(w.PublicKey) && !entry.Reserved() {
-			inputs = append(inputs, transaction.TxInput{
-				TxID:     key.TxID,
-				OutIndex: key.OutIndex,
-			})
-			total += entry.Output.Amount
+	utxos, err := w.utxoRepo.FindByOwner(w.PublicKey)
+
+	if err != nil {
+		return []transaction.TxInput{}, 0, err
+	}
+
+	for _, utxo := range utxos {
+		if reserved := w.reservationTracker.IsReserved(utxo.ID); !reserved {
+			inputs = append(inputs, transaction.TxInput{ID: utxo.ID})
+			total += utxo.Amount
 
 			if total >= amount {
 				break
@@ -70,27 +76,10 @@ func (w Wallet) selectInputs(amount uint64, utxoDB utxo.UTXODB) ([]transaction.T
 	return inputs, total, nil
 }
 
-func (w Wallet) reserveInputs(inputs []transaction.TxInput, utxoDB utxo.UTXODB) error {
-	reserved := make([]utxo.UTXOKey, 0, len(inputs))
-
+func (w Wallet) reserveInputs(inputs []transaction.TxInput) {
 	for _, input := range inputs {
-		key := utxo.UTXOKey{
-			TxID:     input.TxID,
-			OutIndex: input.OutIndex,
-		}
-
-		if err := utxoDB.Reserve(key); err != nil {
-			for _, key := range reserved {
-				utxoDB.Release(key)
-			}
-
-			return err
-		}
-
-		reserved = append(reserved, key)
+		w.reservationTracker.Reserve(input.ID)
 	}
-
-	return nil
 }
 
 func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount uint64, total uint64) []coin.TxOutput {

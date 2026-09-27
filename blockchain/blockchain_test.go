@@ -11,9 +11,10 @@ import (
 	"zxcoin/testutil"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
+	"zxcoin/utxo/inmemory"
 )
 
-func mineGenesisBlock(t *testing.T, bc *Blockchain, utxoDB utxo.UTXODB) block.Block {
+func mineGenesisBlock(t *testing.T, bc *Blockchain, repo utxo.Repository) block.Block {
 	t.Helper()
 	genesisBlock := block.Block{
 		Header:       block.BlockHeader{},
@@ -28,41 +29,42 @@ func mineGenesisBlock(t *testing.T, bc *Blockchain, utxoDB utxo.UTXODB) block.Bl
 
 	genesisBlock.Mine()
 
-	if err := bc.AddBlock(genesisBlock, utxoDB); err != nil {
+	if err := bc.AddBlock(genesisBlock, repo); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
 	}
 
 	return genesisBlock
 }
 
-func assertUTXO(t *testing.T, utxoDB utxo.UTXODB, key utxo.UTXOKey, expectedAmount uint64, expectedOwner *ecdsa.PublicKey) {
+func assertUTXO(t *testing.T, repo utxo.Repository, id utxo.UTXOID, expectedAmount uint64, expectedOwner *ecdsa.PublicKey) {
 	t.Helper()
-	entry, existed := utxoDB[key]
+	u, existed, err := repo.FindByID(id)
+
+	if err != nil {
+		t.Fatalf("не удалось получить UTXO: %v", err)
+	}
 
 	if !existed {
-		t.Fatalf("UTXO не найден: %v", key)
+		t.Fatalf("UTXO не найден: %v", id)
 	}
 
-	if entry.Reserved() {
-		t.Fatalf("UTXO некорректно зарезервирован: %v", key)
+	if u.Amount != expectedAmount {
+		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, u.Amount)
 	}
 
-	if entry.Output.Amount != expectedAmount {
-		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, entry.Output.Amount)
-	}
-
-	if !entry.Output.PublicKey.Equal(expectedOwner) {
+	if !u.Owner.Equal(expectedOwner) {
 		t.Fatalf("неверный владелец UTXO")
 	}
 }
 
 func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	t1 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	t1Hash, err := t1.Hash()
@@ -74,7 +76,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	t1.Inputs[0].Sign(privateKey, t1Hash)
 
 	t2 := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
 	}
 	t2Hash, err := t2.Hash()
@@ -94,7 +96,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	}
 
 	block.Mine()
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -103,13 +105,14 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
-			{TxID: [32]byte{}, OutIndex: 0},
-			{TxID: [32]byte{}, OutIndex: 0},
+			{ID: utxo.UTXOID{}},
+			{ID: utxo.UTXOID{}},
 		},
 		Outputs: []coin.TxOutput{
 			{Amount: amount, PublicKey: publicKey},
@@ -135,7 +138,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 	}
 
 	block.Mine()
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
@@ -144,12 +147,13 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
 	amount := uint64(5)
-	utxoDB := testutil.GenerateSingleUtxo(t, amount, publicKey)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
-			{TxID: [32]byte{}, OutIndex: 0},
+			{ID: utxo.UTXOID{}},
 		},
 		Outputs: []coin.TxOutput{
 			{Amount: amount, PublicKey: publicKey},
@@ -170,7 +174,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*InvalidNonceError](err); !ok {
 		t.Fatalf("ожидалась InvalidNonceError, получено: %v", err)
@@ -179,8 +183,8 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	utxoDB := utxo.UTXODB{}
-	mineGenesisBlock(t, &bc, utxoDB)
+	repo := inmemory.NewRepository()
+	mineGenesisBlock(t, &bc, repo)
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -197,7 +201,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	}
 
 	block.Mine()
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*InvalidPrevHashError](err); !ok {
 		t.Fatalf("ожидалась InvalidPrevHashError, получено: %v", err)
@@ -206,8 +210,8 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	utxoDB := utxo.UTXODB{}
-	genesisBlock := mineGenesisBlock(t, &bc, utxoDB)
+	repo := inmemory.NewRepository()
+	genesisBlock := mineGenesisBlock(t, &bc, repo)
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  genesisBlock.Header.Hash(),
@@ -218,7 +222,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		Difficulty:   bc.currentDifficulty,
 	}
 	block.Mine()
-	err := bc.AddBlock(block, utxoDB)
+	err := bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*InvalidMerkleRootError](err); !ok {
 		t.Fatalf("ожидалась InvalidMerkleRootError, получено: %v", err)
@@ -228,7 +232,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	utxoDB := utxo.UTXODB{}
+	repo := inmemory.NewRepository()
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -249,7 +253,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	}
 
 	block.Mine()
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[*MoreOneCoinbaseError](err); !ok {
 		t.Fatalf("ожидалась MoreOneCoinbaseError, получено: %v", err)
@@ -289,9 +293,9 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 func TestNewBlock_ValidPrevHash(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	utxoDB := utxo.UTXODB{}
+	repo := inmemory.NewRepository()
 
-	genesisBlock := mineGenesisBlock(t, &bc, utxoDB)
+	genesisBlock := mineGenesisBlock(t, &bc, repo)
 	block, err := bc.newBlock([]transaction.Transaction{}, publicKey)
 
 	if err != nil {
@@ -309,7 +313,7 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{TxID: [32]byte{1}, OutIndex: 0}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{TxID: [32]byte{1}}}},
 		Outputs: []coin.TxOutput{{Amount: 3, PublicKey: publicKey}},
 	}
 	coinbaseTx := transaction.Transaction{
@@ -338,7 +342,7 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 func TestAddBlock_CoinbaseExisted(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 1, currentAward: 1}
-	utxoDB := utxo.UTXODB{}
+	repo := inmemory.NewRepository()
 	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}}}
 	block := block.Block{
 		Header: block.BlockHeader{
@@ -357,14 +361,20 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 
 	block.Mine()
 
-	err = bc.AddBlock(block, utxoDB)
+	err = bc.AddBlock(block, repo)
 
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
 
-	if len(utxoDB) == 0 {
-		t.Fatalf("coinbase-транзакция не добавилась в utxodb")
+	utxos, err := repo.FindByOwner(publicKey)
+
+	if err != nil {
+		t.Fatalf("не удалось получить utxo: %v", err)
+	}
+
+	if len(utxos) == 0 {
+		t.Fatalf("coinbase-транзакция не добавилась в repo")
 	}
 
 	hash, err := tx.Hash()
@@ -373,14 +383,14 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: hash, OutIndex: 0}, bc.currentAward, publicKey)
+	assertUTXO(t, repo, utxo.UTXOID{TxID: hash}, bc.currentAward, publicKey)
 }
 
 func TestMineAndAddBlock_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
 	_, otherPublicKey := testutil.GenerateKeyPair(t)
 	bc := Blockchain{currentDifficulty: 2, currentAward: 5}
-	utxoDB := utxo.UTXODB{}
 	mempool := mempool.NewMempool()
 
 	genesisBlock, err := bc.newBlock([]transaction.Transaction{}, publicKey)
@@ -390,7 +400,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 	}
 
 	genesisBlock.Mine()
-	err = bc.AddBlock(genesisBlock, utxoDB)
+	err = bc.AddBlock(genesisBlock, repo)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении первого блока: %v", err)
@@ -403,12 +413,12 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 	}
 
 	tx := transaction.Transaction{
-		Inputs: []transaction.TxInput{
-			{TxID: genesisTxHash, OutIndex: 0},
-		},
-		Outputs: []coin.TxOutput{
-			{Amount: bc.currentAward, PublicKey: otherPublicKey},
-		},
+		Inputs: []transaction.TxInput{{
+			ID: utxo.UTXOID{TxID: genesisTxHash},
+		}},
+		Outputs: []coin.TxOutput{{
+			Amount: bc.currentAward, PublicKey: otherPublicKey,
+		}},
 	}
 	txHash, err := tx.Hash()
 
@@ -418,17 +428,17 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, txHash)
 
-	err = mempool.Add(tx, utxoDB)
+	err = mempool.Add(tx, repo)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
 	}
 
-	_, err = bc.MineAndAddBlock(mempool, utxoDB, 1, publicKey)
+	_, err = bc.MineAndAddBlock(mempool, repo, 1, publicKey)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)
 	}
 
-	assertUTXO(t, utxoDB, utxo.UTXOKey{TxID: txHash, OutIndex: 0}, bc.currentAward, otherPublicKey)
+	assertUTXO(t, repo, utxo.UTXOID{TxID: txHash}, bc.currentAward, otherPublicKey)
 }
