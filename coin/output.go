@@ -13,13 +13,13 @@ type TxOutput struct {
 
 func (o TxOutput) Serialize() ([]byte, error) {
 	if o.PublicKey == nil {
-		return nil, &NilPublicKeyError{}
+		return nil, NilPublicKeyError{}
 	}
 
 	key, err := o.PublicKey.Bytes()
 
 	if err != nil {
-		return nil, &PublicKeySerializeError{Key: o.PublicKey, Previous: err}
+		return nil, PublicKeySerializeError{Key: o.PublicKey, Previous: err}
 	}
 
 	buf := binary.BigEndian.AppendUint32(nil, uint32(len(key)))

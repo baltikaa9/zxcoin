@@ -106,7 +106,7 @@ func (bc *Blockchain) verifyProofOfWork(block block.Block) error {
 
 	for i := range bc.currentDifficulty {
 		if blockHash[i] != 0 {
-			return &InvalidNonceError{blockHash, bc.currentDifficulty}
+			return InvalidNonceError{blockHash, bc.currentDifficulty}
 		}
 	}
 
@@ -115,7 +115,7 @@ func (bc *Blockchain) verifyProofOfWork(block block.Block) error {
 
 func (bc *Blockchain) verifyPrevHash(block block.Block) error {
 	if len(bc.blocks) > 0 && block.Header.PrevHash != bc.blocks[len(bc.blocks)-1].Header.Hash() {
-		return &InvalidPrevHashError{}
+		return InvalidPrevHashError{}
 	}
 
 	return nil
@@ -129,7 +129,7 @@ func (bc *Blockchain) verifyMerkleRoot(block block.Block) error {
 	}
 
 	if block.Header.RootHash != root.Hash {
-		return &InvalidMerkleRootError{}
+		return InvalidMerkleRootError{}
 	}
 
 	return nil
@@ -142,7 +142,7 @@ func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.Reposito
 	for _, transaction := range block.Transactions {
 		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == bc.currentAward {
 			if foundCoinbase {
-				return &MoreOneCoinbaseError{}
+				return MoreOneCoinbaseError{}
 			}
 
 			foundCoinbase = true
@@ -154,10 +154,8 @@ func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.Reposito
 		}
 
 		for _, input := range transaction.Inputs {
-			key := utxo.UTXOKey{TxID: input.TxID, OutIndex: input.OutIndex}
-
-			if spentInThisBlock[key] {
-				return &DoubleSpendError{input.TxID, input.OutIndex}
+			if spentInThisBlock[input.ID] {
+				return DoubleSpendError{input.ID.TxID, input.ID.OutIndex}
 			}
 
 			spentInThisBlock[input.ID] = true

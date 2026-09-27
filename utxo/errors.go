@@ -8,14 +8,14 @@ type UTXONotFoundError struct {
 	// OutIndex uint64
 }
 
-func (e *UTXOKeyNotFoundError) Error() string {
-	return fmt.Sprintf("UTXO %v не найден", e.Key)
+func (e UTXONotFoundError) Error() string {
+	return fmt.Sprintf("UTXO %v:%v не найден", e.ID.TxID, e.ID.OutIndex)
 }
 
 // type UTXOAlreadyReservedError struct {
 	// Key UTXOKey
 // }
 
-func (e *UTXOAlreadyReservedError) Error() string {
-	return fmt.Sprintf("UTXO %v уже зарезервирована", e.Key)
-}
+// func (e *UTXOAlreadyReservedError) Error() string {
+	// return fmt.Sprintf("UTXO %v уже зарезервирована", e.Key)
+// }

@@ -7,6 +7,6 @@ type InsufficientFundsError struct {
 	Requested uint64
 }
 
-func (e *InsufficientFundsError) Error() string {
+func (e InsufficientFundsError) Error() string {
 	return fmt.Sprintf("недостаточно средств: доступно %d, запрошено %d", e.Available, e.Requested)
 }

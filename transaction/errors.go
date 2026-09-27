@@ -7,7 +7,7 @@ type UTXONotFoundError struct {
 	OutIndex uint64
 }
 
-func (e *UTXONotFoundError) Error() string {
+func (e UTXONotFoundError) Error() string {
 	return fmt.Sprintf("UTXO (%v, %v) не найден", e.TxID, e.OutIndex)
 }
 
@@ -16,7 +16,7 @@ type InvalidSignatureError struct {
 	OutIndex uint64
 }
 
-func (e *InvalidSignatureError) Error() string {
+func (e InvalidSignatureError) Error() string {
 	return fmt.Sprintf("UTXO (%v, %v) не верная подпись", e.TxID, e.OutIndex)
 }
 
@@ -25,7 +25,7 @@ type InsufficientFundsError struct {
 	Output uint64
 }
 
-func (e *InsufficientFundsError) Error() string {
+func (e InsufficientFundsError) Error() string {
 	return fmt.Sprintf("недостаточно средств: входы %d, выходы %d", e.Input, e.Output)
 }
 
@@ -34,6 +34,6 @@ type ZeroOutputError struct {
 	OutIndex uint64
 }
 
-func (e *ZeroOutputError) Error() string {
+func (e ZeroOutputError) Error() string {
 	return fmt.Sprintf("нулевое значение выхода %v транзакции %v", e.OutIndex, e.TxID)
 }

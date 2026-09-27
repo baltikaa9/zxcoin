@@ -27,7 +27,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 
 	err = tx.Validate(repo)
 
-	if _, ok := errors.AsType[*UTXONotFoundError](err); !ok {
+	if _, ok := errors.AsType[UTXONotFoundError](err); !ok {
 		t.Fatalf("ожидалась UTXONotFoundError, получено: %v", err)
 	}
 }
@@ -53,7 +53,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 	err = tx.Validate(repo)
 
-	if _, ok := errors.AsType[*InvalidSignatureError](err); !ok {
+	if _, ok := errors.AsType[InvalidSignatureError](err); !ok {
 		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
 	}
 }
@@ -78,7 +78,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 	err = tx.Validate(repo)
 
-	if _, ok := errors.AsType[*InsufficientFundsError](err); !ok {
+	if _, ok := errors.AsType[InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
 	}
 }
@@ -103,7 +103,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 	err = tx.Validate(repo)
 
-	if _, ok := errors.AsType[*ZeroOutputError](err); !ok {
+	if _, ok := errors.AsType[ZeroOutputError](err); !ok {
 		t.Fatalf("ожидалась ZeroOutputError, получено: %v", err)
 	}
 }

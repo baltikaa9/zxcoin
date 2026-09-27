@@ -70,7 +70,7 @@ func (w Wallet) selectInputs(amount uint64) ([]transaction.TxInput, uint64, erro
 	}
 
 	if total < amount {
-		return []transaction.TxInput{}, 0, &InsufficientFundsError{Available: total, Requested: amount}
+		return []transaction.TxInput{}, 0, InsufficientFundsError{Available: total, Requested: amount}
 	}
 
 	return inputs, total, nil

@@ -10,12 +10,12 @@ type PublicKeySerializeError struct {
 	Previous error
 }
 
-func (e *PublicKeySerializeError) Error() string {
+func (e PublicKeySerializeError) Error() string {
 	return fmt.Sprintf("ошибка при сериализации публичного ключа %v: %v", *e.Key, e.Previous)
 }
 
 type NilPublicKeyError struct{}
 
-func (e *NilPublicKeyError) Error() string {
+func (e NilPublicKeyError) Error() string {
 	return "публичный ключ не заполнен"
 }

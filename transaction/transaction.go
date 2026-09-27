@@ -109,8 +109,12 @@ func (t Transaction) validateInputs(utxoDB utxo.Repository) error {
 			return err
 		}
 
-		if (input.Signature == emptySignature) || (!input.Verify(utxo.Output.PublicKey, hash)) {
-			return &InvalidSignatureError{input.TxID, input.OutIndex}
+		if !exists {
+			return UTXONotFoundError{input.ID.TxID, input.ID.OutIndex}
+		}
+
+		if (input.Signature == emptySignature) || (!input.Verify(utxo.Owner, hash)) {
+			return InvalidSignatureError{input.ID.TxID, input.ID.OutIndex}
 		}
 	}
 
@@ -126,7 +130,7 @@ func (t Transaction) validateOutputs() error {
 
 	for i, output := range t.Outputs {
 		if output.Amount == 0 {
-			return &ZeroOutputError{TxID: hash, OutIndex: uint64(i)}
+			return ZeroOutputError{TxID: hash, OutIndex: uint64(i)}
 		}
 	}
 
@@ -147,7 +151,7 @@ func (t Transaction) validateSum(utxoDB utxo.Repository) error {
 	}
 
 	if outputAmount > inputAmount {
-		return &InsufficientFundsError{inputAmount, outputAmount}
+		return InsufficientFundsError{inputAmount, outputAmount}
 	}
 
 	return nil

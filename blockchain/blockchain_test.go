@@ -98,7 +98,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	block.Mine()
 	err = bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
+	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
 	}
 }
@@ -140,7 +140,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 	block.Mine()
 	err = bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*DoubleSpendError](err); !ok {
+	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
 		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
 	}
 }
@@ -176,7 +176,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 	err = bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*InvalidNonceError](err); !ok {
+	if _, ok := errors.AsType[InvalidNonceError](err); !ok {
 		t.Fatalf("ожидалась InvalidNonceError, получено: %v", err)
 	}
 }
@@ -203,7 +203,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	block.Mine()
 	err = bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*InvalidPrevHashError](err); !ok {
+	if _, ok := errors.AsType[InvalidPrevHashError](err); !ok {
 		t.Fatalf("ожидалась InvalidPrevHashError, получено: %v", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	block.Mine()
 	err := bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*InvalidMerkleRootError](err); !ok {
+	if _, ok := errors.AsType[InvalidMerkleRootError](err); !ok {
 		t.Fatalf("ожидалась InvalidMerkleRootError, получено: %v", err)
 	}
 }
@@ -255,7 +255,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	block.Mine()
 	err = bc.AddBlock(block, repo)
 
-	if _, ok := errors.AsType[*MoreOneCoinbaseError](err); !ok {
+	if _, ok := errors.AsType[MoreOneCoinbaseError](err); !ok {
 		t.Fatalf("ожидалась MoreOneCoinbaseError, получено: %v", err)
 	}
 }
