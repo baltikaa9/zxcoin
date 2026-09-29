@@ -37,3 +37,11 @@ type ZeroOutputError struct {
 func (e ZeroOutputError) Error() string {
 	return fmt.Sprintf("нулевое значение выхода %v транзакции %v", e.OutIndex, e.TxID)
 }
+
+type EmptyOutputsError struct {
+	TxID [32]byte
+}
+
+func (e EmptyOutputsError) Error() string {
+	return fmt.Sprintf("отсутствуют выходы транзакции %v", e.TxID)
+}

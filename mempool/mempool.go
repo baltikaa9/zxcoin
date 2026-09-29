@@ -8,10 +8,14 @@ import (
 
 type Mempool struct {
 	transactions map[[32]byte]transaction.Transaction
+	tv           *transaction.TransactionValidator
 }
 
-func NewMempool() *Mempool {
-	return &Mempool{make(map[[32]byte]transaction.Transaction)}
+func NewMempool(tv *transaction.TransactionValidator) *Mempool {
+	return &Mempool{
+		transactions: make(map[[32]byte]transaction.Transaction),
+		tv:           tv,
+	}
 }
 
 func (m *Mempool) GetPending(limit int) []transaction.Transaction {
@@ -29,7 +33,7 @@ func (m *Mempool) GetPending(limit int) []transaction.Transaction {
 }
 
 func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.Repository) error {
-	if err := transaction.Validate(utxoDB); err != nil {
+	if err := m.tv.Validate(transaction); err != nil {
 		return err
 	}
 

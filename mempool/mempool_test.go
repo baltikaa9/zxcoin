@@ -12,6 +12,7 @@ import (
 func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := transaction.TransactionValidator{UtxoRepo: repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 	tx := transaction.Transaction{
@@ -25,7 +26,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	tx.Inputs[0].Sign(privateKey, hash)
-	mempool := NewMempool()
+	mempool := NewMempool(&validator)
 	err = mempool.Add(tx, repo)
 
 	if err != nil {

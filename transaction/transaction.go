@@ -77,50 +77,6 @@ func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
 	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
 }
 
-func (t Transaction) Validate(utxoDB utxo.Repository) error {
-	if err := t.validateInputs(utxoDB); err != nil {
-		return err
-	}
-
-	if err := t.validateOutputs(); err != nil {
-		return err
-	}
-
-	if err := t.validateSum(utxoDB); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (t Transaction) validateInputs(utxoDB utxo.Repository) error {
-	hash, err := t.Hash()
-
-	if err != nil {
-		return err
-	}
-
-	emptySignature := Signature{}
-
-	for _, input := range t.Inputs {
-		utxo, exists, err := utxoDB.FindByID(input.ID)
-
-		if err != nil {
-			return err
-		}
-
-		if !exists {
-			return UTXONotFoundError{input.ID.TxID, input.ID.OutIndex}
-		}
-
-		if (input.Signature == emptySignature) || (!input.Verify(utxo.Owner, hash)) {
-			return InvalidSignatureError{input.ID.TxID, input.ID.OutIndex}
-		}
-	}
-
-	return nil
-}
-
 func (t Transaction) validateOutputs() error {
 	hash, err := t.Hash()
 
@@ -128,30 +84,14 @@ func (t Transaction) validateOutputs() error {
 		return err
 	}
 
+	if len(t.Outputs) == 0 {
+		return EmptyOutputsError{TxID: hash}
+	}
+
 	for i, output := range t.Outputs {
 		if output.Amount == 0 {
 			return ZeroOutputError{TxID: hash, OutIndex: uint64(i)}
 		}
-	}
-
-	return nil
-}
-
-func (t Transaction) validateSum(utxoDB utxo.Repository) error {
-	inputAmount := uint64(0)
-	outputAmount := uint64(0)
-
-	for _, input := range t.Inputs {
-		utxo, _, _ := utxoDB.FindByID(input.ID)
-		inputAmount += utxo.Amount
-	}
-
-	for _, output := range t.Outputs {
-		outputAmount += output.Amount
-	}
-
-	if outputAmount > inputAmount {
-		return InsufficientFundsError{inputAmount, outputAmount}
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"zxcoin/blockchain"
 	"zxcoin/mempool"
+	"zxcoin/transaction"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 	"zxcoin/wallet"
@@ -12,6 +13,7 @@ import (
 func main() {
 	repo := inmemory.NewRepository()
 	tracker := wallet.NewReservationTracker()
+	validator := transaction.TransactionValidator{UtxoRepo: repo}
 
 	myWallet := wallet.NewWallet(tracker, repo)
 	otherWallet := wallet.NewWallet(tracker, repo)
@@ -31,7 +33,7 @@ func main() {
 			panic(err)
 		}
 	}
-	mp := mempool.NewMempool()
+	mp := mempool.NewMempool(&validator)
 
 	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
 
@@ -57,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	bc := blockchain.NewBlockchain(2, 42)
+	bc := blockchain.NewBlockchain(2, 42, &validator)
 
 	if _, err := bc.MineAndAddBlock(mp, repo, 3, myWallet.PublicKey); err != nil {
 		panic(err)

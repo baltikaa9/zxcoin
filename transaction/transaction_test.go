@@ -12,6 +12,7 @@ import (
 func TestValidate_UTXONotFound(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := TransactionValidator{repo}
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
@@ -25,7 +26,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, hash)
 
-	err = tx.Validate(repo)
+	err = validator.Validate(tx)
 
 	if _, ok := errors.AsType[UTXONotFoundError](err); !ok {
 		t.Fatalf("ожидалась UTXONotFoundError, получено: %v", err)
@@ -36,6 +37,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	attackerPrivateKey, _ := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := TransactionValidator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
@@ -51,7 +53,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 	tx.Inputs[0].Sign(attackerPrivateKey, hash)
 
-	err = tx.Validate(repo)
+	err = validator.Validate(tx)
 
 	if _, ok := errors.AsType[InvalidSignatureError](err); !ok {
 		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
@@ -61,6 +63,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 func TestValidate_InsufficientFunds(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := TransactionValidator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
@@ -76,7 +79,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, hash)
 
-	err = tx.Validate(repo)
+	err = validator.Validate(tx)
 
 	if _, ok := errors.AsType[InsufficientFundsError](err); !ok {
 		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
@@ -86,6 +89,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := TransactionValidator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
@@ -101,7 +105,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, hash)
 
-	err = tx.Validate(repo)
+	err = validator.Validate(tx)
 
 	if _, ok := errors.AsType[ZeroOutputError](err); !ok {
 		t.Fatalf("ожидалась ZeroOutputError, получено: %v", err)
@@ -111,6 +115,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 func TestValidate_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
+	validator := TransactionValidator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
@@ -126,7 +131,7 @@ func TestValidate_Success(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, hash)
 
-	err = tx.Validate(repo)
+	err = validator.Validate(tx)
 
 	if err != nil {
 		t.Fatalf("ошибка при валидации: %v", err)

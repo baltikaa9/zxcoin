@@ -16,10 +16,11 @@ type Blockchain struct {
 	blocks            []block.Block
 	currentDifficulty uint64
 	currentAward      uint64
+	tv                *transaction.TransactionValidator
 }
 
-func NewBlockchain(difficulty uint64, award uint64) Blockchain {
-	return Blockchain{currentDifficulty: difficulty, currentAward: award}
+func NewBlockchain(difficulty uint64, award uint64, tv *transaction.TransactionValidator) Blockchain {
+	return Blockchain{currentDifficulty: difficulty, currentAward: award, tv: tv}
 }
 
 func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) (block.Block, error) {
@@ -149,7 +150,7 @@ func (bc *Blockchain) verifyTransactions(block block.Block, utxoDB utxo.Reposito
 			continue
 		}
 
-		if err := transaction.Validate(utxoDB); err != nil {
+		if err := bc.tv.Validate(transaction); err != nil {
 			return err
 		}
 
