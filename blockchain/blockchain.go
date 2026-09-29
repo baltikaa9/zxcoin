@@ -68,7 +68,10 @@ func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.Repository) error 
 		return err
 	}
 
-	bc.applyBlock(block, utxoDB)
+	if err := bc.applyBlock(block, utxoDB); err != nil {
+		return err
+	}
+
 	bc.blocks = append(bc.blocks, block)
 
 	return nil
