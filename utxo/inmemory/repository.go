@@ -22,7 +22,7 @@ func (r *Repository) FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
 	utxos := make([]utxo.UTXO, 0, len(r.db))
 
 	for _, u := range r.db {
-		if u.Owner.Equal(owner) {
+		if u.Output.Owner.Equal(owner) {
 			utxos = append(utxos, u)
 		}
 	}

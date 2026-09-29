@@ -21,7 +21,7 @@ func TestSerialize_NilPublicKey(t *testing.T) {
 func TestSerialize_PublicKeySerialize(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	publicKey.X = big.NewInt(42)
-	output := coin.TxOutput{Amount: 1, PublicKey: publicKey}
+	output := coin.TxOutput{Amount: 1, Owner: publicKey}
 
 	_, err := output.Serialize()
 
@@ -32,7 +32,7 @@ func TestSerialize_PublicKeySerialize(t *testing.T) {
 
 func TestSerialize_Success(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
-	output := coin.TxOutput{Amount: 1, PublicKey: publicKey}
+	output := coin.TxOutput{Amount: 1, Owner: publicKey}
 
 	_, err := output.Serialize()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"zxcoin/blockchain"
+	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
@@ -20,12 +21,22 @@ func main() {
 
 	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
-	utxos := []utxo.UTXO{
-		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 0}, Amount: 5, Owner: myWallet.PublicKey},
-		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 1}, Amount: 3, Owner: myWallet.PublicKey},
-		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 2}, Amount: 11, Owner: myWallet.PublicKey},
-		{ID: utxo.UTXOID{TxID: [32]byte{}, OutIndex: 3}, Amount: 10, Owner: myWallet.PublicKey},
+	coins := []coin.TxOutput{
+		{Amount: 5, Owner: myWallet.PublicKey},
+		{Amount: 3, Owner: myWallet.PublicKey},
+		{Amount: 11, Owner: myWallet.PublicKey},
+		{Amount: 10, Owner: myWallet.PublicKey},
 	}
+
+	utxos := make([]utxo.UTXO, 0, len(coins))
+
+	for i, c := range coins {
+		utxos = append(utxos, utxo.UTXO{
+			ID:   utxo.UTXOID{TxID: [32]byte{}, OutIndex: uint64(i)},
+			Output: c,
+		})
+	}
+
 	for _, u := range utxos {
 		err := repo.Save(u)
 

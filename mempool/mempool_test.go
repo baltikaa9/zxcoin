@@ -17,7 +17,7 @@ func TestAdd(t *testing.T) {
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -44,7 +44,7 @@ func TestRemove(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 42, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -65,7 +65,7 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 42, Owner: publicKey}},
 	}
 	tx1Hash, err := tx1.Hash()
 
@@ -75,7 +75,7 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 
 	tx2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{OutIndex: 1}}},
-		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 42, Owner: publicKey}},
 	}
 	tx2Hash, err := tx2.Hash()
 
@@ -99,7 +99,7 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 42, Owner: publicKey}},
 	}
 	tx1Hash, err := tx1.Hash()
 
@@ -109,7 +109,7 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 
 	tx2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{OutIndex: 1}}},
-		Outputs: []coin.TxOutput{{Amount: 42, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 42, Owner: publicKey}},
 	}
 	tx2Hash, err := tx2.Hash()
 

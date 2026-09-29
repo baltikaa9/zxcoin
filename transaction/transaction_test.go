@@ -16,7 +16,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -43,7 +43,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -69,7 +69,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount * 2, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount * 2, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -95,7 +95,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: 0, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 0, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 
@@ -121,7 +121,7 @@ func TestValidate_Success(t *testing.T) {
 
 	tx := Transaction{
 		Inputs:  []TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
 

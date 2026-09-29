@@ -7,19 +7,19 @@ import (
 )
 
 type TxOutput struct {
-	Amount    uint64
-	PublicKey *ecdsa.PublicKey
+	Amount uint64
+	Owner  *ecdsa.PublicKey
 }
 
 func (o TxOutput) Serialize() ([]byte, error) {
-	if o.PublicKey == nil {
+	if o.Owner == nil {
 		return nil, NilPublicKeyError{}
 	}
 
-	key, err := o.PublicKey.Bytes()
+	key, err := o.Owner.Bytes()
 
 	if err != nil {
-		return nil, PublicKeySerializeError{Key: o.PublicKey, Previous: err}
+		return nil, PublicKeySerializeError{Key: o.Owner, Previous: err}
 	}
 
 	buf := binary.BigEndian.AppendUint32(nil, uint32(len(key)))

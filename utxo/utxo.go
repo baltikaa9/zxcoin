@@ -2,16 +2,15 @@
 package utxo
 
 import (
-	"crypto/ecdsa"
+	"zxcoin/coin"
 )
-
-type UTXO struct {
-	ID     UTXOID
-	Amount uint64
-	Owner  *ecdsa.PublicKey
-}
 
 type UTXOID struct {
 	TxID     [32]byte
 	OutIndex uint64
+}
+
+type UTXO struct {
+	ID     UTXOID
+	Output coin.TxOutput
 }

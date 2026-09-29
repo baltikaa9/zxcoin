@@ -12,7 +12,7 @@ func TestBuildMerkleTree_OneNode(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 
 	tx := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 
 	root, err := BuildMerkleTree([]transaction.Transaction{tx})
@@ -36,11 +36,11 @@ func TestBuildMerkleTree_TwoNodes(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 
 	t2 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 10, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 10, Owner: publicKey}},
 	}
 
 	root, err := BuildMerkleTree([]transaction.Transaction{t1, t2})
@@ -72,15 +72,15 @@ func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 
 	t2 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 10, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 10, Owner: publicKey}},
 	}
 
 	t3 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 15, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 15, Owner: publicKey}},
 	}
 
 	root, err := BuildMerkleTree([]transaction.Transaction{t1, t2, t3})
@@ -120,15 +120,15 @@ func TestBuildMerkleTree_Twice(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 
 	t1 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 5, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 
 	t2 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 10, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 10, Owner: publicKey}},
 	}
 
 	t3 := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: 15, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 15, Owner: publicKey}},
 	}
 
 	root1, err := BuildMerkleTree([]transaction.Transaction{t1, t2, t3})

@@ -65,7 +65,7 @@ func (w Wallet) selectInputs(amount uint64) ([]transaction.TxInput, uint64, erro
 	for _, utxo := range utxos {
 		if reserved := w.reservationTracker.IsReserved(utxo.ID); !reserved {
 			inputs = append(inputs, transaction.TxInput{ID: utxo.ID})
-			total += utxo.Amount
+			total += utxo.Output.Amount
 
 			if total >= amount {
 				break
@@ -87,11 +87,11 @@ func (w Wallet) reserveInputs(inputs []transaction.TxInput) {
 }
 
 func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount uint64, total uint64) []coin.TxOutput {
-	outputs := []coin.TxOutput{{Amount: amount, PublicKey: to}}
+	outputs := []coin.TxOutput{{Amount: amount, Owner: to}}
 	change := total - amount
 
 	if change > 0 {
-		outputs = append(outputs, coin.TxOutput{Amount: change, PublicKey: w.PublicKey})
+		outputs = append(outputs, coin.TxOutput{Amount: change, Owner: w.PublicKey})
 	}
 
 	return outputs

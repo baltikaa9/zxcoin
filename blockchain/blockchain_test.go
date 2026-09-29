@@ -48,11 +48,11 @@ func assertUTXO(t *testing.T, repo utxo.Repository, id utxo.UTXOID, expectedAmou
 		t.Fatalf("UTXO не найден: %v", id)
 	}
 
-	if u.Amount != expectedAmount {
-		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, u.Amount)
+	if u.Output.Amount != expectedAmount {
+		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, u.Output.Amount)
 	}
 
-	if !u.Owner.Equal(expectedOwner) {
+	if !u.Output.Owner.Equal(expectedOwner) {
 		t.Fatalf("неверный владелец UTXO")
 	}
 }
@@ -66,7 +66,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 	t1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	t1Hash, err := t1.Hash()
 
@@ -78,7 +78,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 
 	t2 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
-		Outputs: []coin.TxOutput{{Amount: amount, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	t2Hash, err := t2.Hash()
 
@@ -117,7 +117,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 			{ID: utxo.UTXOID{}},
 		},
 		Outputs: []coin.TxOutput{
-			{Amount: amount, PublicKey: publicKey},
+			{Amount: amount, Owner: publicKey},
 		},
 	}
 
@@ -159,7 +159,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 			{ID: utxo.UTXOID{}},
 		},
 		Outputs: []coin.TxOutput{
-			{Amount: amount, PublicKey: publicKey},
+			{Amount: amount, Owner: publicKey},
 		},
 	}
 	hash, err := tx.Hash()
@@ -246,8 +246,8 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{
-			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}}},
-			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}}},
+			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}},
+			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}},
 		},
 		Difficulty: bc.currentDifficulty,
 	}
@@ -289,7 +289,7 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 
 	output := tx.Outputs[0]
 
-	if !output.PublicKey.Equal(publicKey) {
+	if !output.Owner.Equal(publicKey) {
 		t.Fatalf("неверный получатель coinbase-транзакции")
 	}
 
@@ -325,10 +325,10 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 	bc := NewBlockchain(1, 1, &validator)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{TxID: [32]byte{1}}}},
-		Outputs: []coin.TxOutput{{Amount: 3, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: 3, Owner: publicKey}},
 	}
 	coinbaseTx := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}},
+		Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}},
 	}
 
 	block, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
@@ -355,7 +355,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 	repo := inmemory.NewRepository()
 	validator := transaction.TransactionValidator{UtxoRepo: repo}
 	bc := NewBlockchain(1, 1, &validator)
-	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: publicKey}}}
+	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}}
 	block := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  [32]byte{},
@@ -430,7 +430,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 			ID: utxo.UTXOID{TxID: genesisTxHash},
 		}},
 		Outputs: []coin.TxOutput{{
-			Amount: bc.currentAward, PublicKey: otherPublicKey,
+			Amount: bc.currentAward, Owner: otherPublicKey,
 		}},
 	}
 	txHash, err := tx.Hash()

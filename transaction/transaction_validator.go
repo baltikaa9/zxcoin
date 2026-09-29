@@ -54,7 +54,7 @@ func (v TransactionValidator) verifySignatures(tx Transaction, spent []utxo.UTXO
 	emptySignature := Signature{}
 
 	for i, input := range tx.Inputs {
-		if (input.Signature == emptySignature) || (!input.Verify(spent[i].Owner, hash)) {
+		if (input.Signature == emptySignature) || (!input.Verify(spent[i].Output.Owner, hash)) {
 			return InvalidSignatureError{input.ID.TxID, input.ID.OutIndex}
 		}
 	}
@@ -67,7 +67,7 @@ func (v TransactionValidator) validateSum(tx Transaction, spent []utxo.UTXO) err
 	outputAmount := uint64(0)
 
 	for _, input := range spent {
-		inputAmount += input.Amount
+		inputAmount += input.Output.Amount
 	}
 
 	for _, output := range tx.Outputs {

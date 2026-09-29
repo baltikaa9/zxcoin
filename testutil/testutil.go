@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"testing"
+	"zxcoin/coin"
 	"zxcoin/utxo"
 )
 
@@ -24,9 +25,11 @@ func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey,
 	t.Helper()
 
 	u := utxo.UTXO{
-		ID:     utxo.UTXOID{},
-		Amount: amount,
-		Owner:  publicKey,
+		ID: utxo.UTXOID{},
+		Output: coin.TxOutput{
+			Amount: amount,
+			Owner:  publicKey,
+		},
 	}
 
 	if err := repo.Save(u); err != nil {

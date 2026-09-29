@@ -24,7 +24,7 @@ func NewBlockchain(difficulty uint64, award uint64, tv *transaction.TransactionV
 }
 
 func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) (block.Block, error) {
-	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, PublicKey: creator}}}
+	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: creator}}}
 
 	prevHash := [32]byte{}
 
@@ -182,9 +182,11 @@ func (bc *Blockchain) applyBlock(block block.Block, utxoDB utxo.Repository) erro
 
 		for i, output := range transaction.Outputs {
 			err := utxoDB.Save(utxo.UTXO{
-				ID:     utxo.UTXOID{TxID: hash, OutIndex: uint64(i)},
-				Amount: output.Amount,
-				Owner:  output.PublicKey,
+				ID: utxo.UTXOID{TxID: hash, OutIndex: uint64(i)},
+				Output: coin.TxOutput{
+					Amount: output.Amount,
+					Owner:  output.Owner,
+				},
 			})
 
 			if err != nil {

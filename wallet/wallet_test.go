@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"testing"
+	"zxcoin/coin"
 	"zxcoin/testutil"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
@@ -82,8 +83,8 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount, output.Amount)
 	}
 
-	if !output.PublicKey.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
+	if !output.Owner.Equal(otherWallet.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
 	}
 
 	hash, err := tx.Hash()
@@ -119,9 +120,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
 	if err := repo.Save(utxo.UTXO{
-		ID:     id1,
-		Amount: amount,
-		Owner:  myWallet.PublicKey,
+		ID: id1,
+		Output: coin.TxOutput{
+			Amount: amount,
+			Owner:  myWallet.PublicKey,
+		},
 	}); err != nil {
 		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
@@ -158,8 +161,8 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount, output.Amount)
 	}
 
-	if !output.PublicKey.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
+	if !output.Owner.Equal(otherWallet.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
 	}
 
 	hash, err := tx.Hash()
@@ -230,12 +233,12 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatalf("неверная сумма сдачи транзакции. Ожидалось %v, получено %v", amount-payment, change.Amount)
 	}
 
-	if !output.PublicKey.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
+	if !output.Owner.Equal(otherWallet.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
 	}
 
-	if !change.PublicKey.Equal(myWallet.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.PublicKey)
+	if !change.Owner.Equal(myWallet.PublicKey) {
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.Owner)
 	}
 
 	hash, err := tx.Hash()
@@ -272,9 +275,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	payment := uint64(4)
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
 	if err := repo.Save(utxo.UTXO{
-		ID:     id1,
-		Amount: amount,
-		Owner:  myWallet.PublicKey,
+		ID: id1,
+		Output: coin.TxOutput{
+			Amount: amount,
+			Owner:  myWallet.PublicKey,
+		},
 	}); err != nil {
 		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
@@ -315,12 +320,12 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount*2-payment*2, change.Amount)
 	}
 
-	if !output.PublicKey.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.PublicKey)
+	if !output.Owner.Equal(otherWallet.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
 	}
 
-	if !change.PublicKey.Equal(myWallet.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.PublicKey)
+	if !change.Owner.Equal(myWallet.PublicKey) {
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.Owner)
 	}
 
 	hash, err := tx.Hash()
