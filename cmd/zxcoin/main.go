@@ -51,11 +51,11 @@ func main() {
 	other, _ := repo.FindByOwner(otherWallet.PublicKey)
 	fmt.Printf("было\nMy: %v\nOther: %v\n\n", my, other)
 
-	if err := mp.Add(t1, repo); err != nil {
+	if err := mp.Add(t1); err != nil {
 		panic(err)
 	}
 
-	if err := mp.Add(t2, repo); err != nil {
+	if err := mp.Add(t2); err != nil {
 		panic(err)
 	}
 

@@ -441,7 +441,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 
 	tx.Inputs[0].Sign(privateKey, txHash)
 
-	err = mempool.Add(tx, repo)
+	err = mempool.Add(tx)
 
 	if err != nil {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)

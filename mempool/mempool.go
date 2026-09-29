@@ -3,7 +3,6 @@ package mempool
 
 import (
 	"zxcoin/transaction"
-	"zxcoin/utxo"
 )
 
 type Mempool struct {
@@ -32,7 +31,7 @@ func (m *Mempool) GetPending(limit int) []transaction.Transaction {
 	return result
 }
 
-func (m *Mempool) Add(transaction transaction.Transaction, utxoDB utxo.Repository) error {
+func (m *Mempool) Add(transaction transaction.Transaction) error {
 	if err := m.tv.Validate(transaction); err != nil {
 		return err
 	}
