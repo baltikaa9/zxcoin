@@ -7,4 +7,16 @@ type Repository interface {
 	FindByOwner(owner *ecdsa.PublicKey) ([]UTXO, error)
 	Save(utxo UTXO) error
 	Delete(id UTXOID) error
+
+	Begin() (Transaction, error)
+}
+
+type Transaction interface {
+	FindByID(id UTXOID) (UTXO, bool, error)
+	FindByOwner(owner *ecdsa.PublicKey) ([]UTXO, error)
+	Save(utxo UTXO) error
+	Delete(id UTXOID) error
+
+	Commit() error
+	Rollback() error
 }

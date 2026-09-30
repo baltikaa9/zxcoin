@@ -123,6 +123,14 @@ func (bs *BlockchainService) newBlock(
 }
 
 func (bs *BlockchainService) applyBlock(block block.Block) error {
+	tx, err := bs.utxoRepo.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
 	for _, transaction := range block.Transactions {
 		hash, err := transaction.Hash()
 
@@ -131,27 +139,25 @@ func (bs *BlockchainService) applyBlock(block block.Block) error {
 		}
 
 		for _, input := range transaction.Inputs {
-			if err := bs.utxoRepo.Delete(input.ID); err != nil {
+			if err := tx.Delete(input.ID); err != nil {
 				return err
 			}
 		}
 
 		for i, output := range transaction.Outputs {
-			err := bs.utxoRepo.Save(utxo.UTXO{
+			if err := tx.Save(utxo.UTXO{
 				ID: utxo.UTXOID{TxID: hash, OutIndex: uint64(i)},
 				Output: coin.TxOutput{
 					Amount: output.Amount,
 					Owner:  output.Owner,
 				},
-			})
-
-			if err != nil {
+			}); err != nil {
 				return err
 			}
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (bs *BlockchainService) verifyTransactions(block block.Block) error {
