@@ -19,7 +19,6 @@ func mineGenesisBlock(t *testing.T, bc *Blockchain, repo utxo.Repository) block.
 	genesisBlock := block.Block{
 		Header:       block.BlockHeader{},
 		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
 	}
 	err := genesisBlock.CalculateRootHash()
 
@@ -27,7 +26,7 @@ func mineGenesisBlock(t *testing.T, bc *Blockchain, repo utxo.Repository) block.
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine()
+	genesisBlock.Mine(bc.currentDifficulty)
 
 	if err := bc.AddBlock(genesisBlock, repo); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
@@ -96,7 +95,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
@@ -139,7 +138,7 @@ func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
@@ -196,7 +195,6 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
 	}
 	err := block.CalculateRootHash()
 
@@ -204,7 +202,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[InvalidPrevHashError](err); !ok {
@@ -224,9 +222,8 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{},
-		Difficulty:   bc.currentDifficulty,
 	}
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 	err := bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[InvalidMerkleRootError](err); !ok {
@@ -249,7 +246,6 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}},
 			{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}},
 		},
-		Difficulty: bc.currentDifficulty,
 	}
 
 	err := block.CalculateRootHash()
@@ -258,7 +254,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 	err = bc.AddBlock(block, repo)
 
 	if _, ok := errors.AsType[MoreOneCoinbaseError](err); !ok {
@@ -363,7 +359,6 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{tx},
-		Difficulty:   bc.currentDifficulty,
 	}
 	err := block.CalculateRootHash()
 
@@ -371,7 +366,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine()
+	block.Mine(bc.currentDifficulty)
 
 	err = bc.AddBlock(block, repo)
 
@@ -412,7 +407,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine()
+	genesisBlock.Mine(bc.currentDifficulty)
 	err = bc.AddBlock(genesisBlock, repo)
 
 	if err != nil {

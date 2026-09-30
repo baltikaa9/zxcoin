@@ -18,7 +18,6 @@ type BlockHeader struct {
 type Block struct {
 	Header       BlockHeader
 	Transactions []transaction.Transaction
-	Difficulty   uint64
 }
 
 func (bh BlockHeader) serialize() []byte {
@@ -34,13 +33,13 @@ func (bh BlockHeader) Hash() [32]byte {
 	return sha256.Sum256(bh.serialize())
 }
 
-func (b *Block) Mine() {
+func (b *Block) Mine(difficulty uint64) {
 	for {
 		hash := b.Header.Hash()
 
 		valid := true
 
-		for i := range b.Difficulty {
+		for i := range difficulty {
 			if hash[i] != 0 {
 				valid = false
 				break

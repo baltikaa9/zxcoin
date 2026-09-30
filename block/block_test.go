@@ -6,19 +6,17 @@ import (
 )
 
 func TestMine(t *testing.T) {
+	difficulty := uint64(2)
 	b := Block{
 		Header:       BlockHeader{PrevHash: [32]byte{}, RootHash: [32]byte{}, Timestamp: 0},
 		Transactions: []transaction.Transaction{},
-		Difficulty:   2,
 	}
-
-	b.Mine()
-
+	b.Mine(difficulty)
 	hash := b.Header.Hash()
 
-	for i := range b.Difficulty {
+	for i := range difficulty {
 		if hash[i] != 0 {
-			t.Fatalf("хеш не удовлетворяет сложности %d: %v", b.Difficulty, hash)
+			t.Fatalf("хеш не удовлетворяет сложности %d: %v", difficulty, hash)
 		}
 	}
 }

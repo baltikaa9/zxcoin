@@ -39,7 +39,6 @@ func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *
 			Timestamp: uint32(time.Now().Unix()),
 		},
 		Transactions: append(transactions, coinbaseTransaction),
-		Difficulty:   bc.currentDifficulty,
 	}
 
 	err := newBlock.CalculateRootHash()
@@ -86,7 +85,7 @@ func (bc *Blockchain) MineAndAddBlock(mempool *mempool.Mempool, utxoDB utxo.Repo
 		return block.Block{}, err
 	}
 
-	newBlock.Mine()
+	newBlock.Mine(bc.currentDifficulty)
 
 	if err := bc.AddBlock(newBlock, utxoDB); err != nil {
 		return block.Block{}, err
