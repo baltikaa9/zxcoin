@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"zxcoin/transaction"
+	"zxcoin/types"
 )
 
 type BlockHeader struct {
-	PrevHash  [32]byte
+	PrevHash  types.Hash
 	Nonce     uint64
-	RootHash  [32]byte
+	RootHash  types.Hash
 	Timestamp uint32
 }
 
@@ -28,7 +29,7 @@ func (bh BlockHeader) serialize() []byte {
 	return buf
 }
 
-func (bh BlockHeader) Hash() [32]byte {
+func (bh BlockHeader) Hash() types.Hash {
 	return sha256.Sum256(bh.serialize())
 }
 
@@ -79,8 +80,8 @@ func (b Block) ValidateRootHash() error {
 	return nil
 }
 
-func (b Block) getTxHashes() ([][32]byte, error) {
-	txHashes := make([][32]byte, 0, len(b.Transactions))
+func (b Block) getTxHashes() ([]types.Hash, error) {
+	txHashes := make([]types.Hash, 0, len(b.Transactions))
 
 	for _, tx := range b.Transactions {
 		hash, err := tx.Hash()

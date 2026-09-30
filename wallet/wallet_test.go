@@ -6,6 +6,7 @@ import (
 	"testing"
 	"zxcoin/coin"
 	"zxcoin/testutil"
+	"zxcoin/types"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 )
@@ -50,7 +51,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 	otherWallet := NewWallet(tracker, repo)
 
 	id := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
 	amount := uint64(5)
@@ -110,11 +111,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	otherWallet := NewWallet(tracker, repo)
 
 	id0 := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
 	id1 := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 1,
 	}
 	amount := uint64(5)
@@ -194,7 +195,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	otherWallet := NewWallet(tracker, repo)
 
 	id := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
 	amount := uint64(5)
@@ -264,11 +265,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	otherWallet := NewWallet(tracker, repo)
 
 	id0 := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
 	id1 := utxo.UTXOID{
-		TxID:     [32]byte{},
+		TxID:     types.Hash{},
 		OutIndex: 1,
 	}
 	amount := uint64(5)

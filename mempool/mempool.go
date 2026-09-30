@@ -3,16 +3,17 @@ package mempool
 
 import (
 	"zxcoin/transaction"
+	"zxcoin/types"
 )
 
 type Mempool struct {
-	transactions map[[32]byte]transaction.Transaction
+	transactions map[types.Hash]transaction.Transaction
 	validator    *transaction.TransactionValidator
 }
 
 func NewMempool(validator *transaction.TransactionValidator) *Mempool {
 	return &Mempool{
-		transactions: make(map[[32]byte]transaction.Transaction),
+		transactions: make(map[types.Hash]transaction.Transaction),
 		validator:    validator,
 	}
 }
@@ -47,6 +48,6 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 	return nil
 }
 
-func (m *Mempool) Remove(hash [32]byte) {
+func (m *Mempool) Remove(hash types.Hash) {
 	delete(m.transactions, hash)
 }

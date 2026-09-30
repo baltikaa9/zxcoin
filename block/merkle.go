@@ -2,15 +2,16 @@ package block
 
 import (
 	"crypto/sha256"
+	"zxcoin/types"
 )
 
 type Node struct {
-	Hash  [32]byte
+	Hash  types.Hash
 	Left  *Node
 	Right *Node
 }
 
-func buildMerkleTree(hashes [][32]byte) Node {
+func buildMerkleTree(hashes []types.Hash) Node {
 	if len(hashes) == 0 {
 		return Node{}
 	}

@@ -6,6 +6,7 @@ import (
 	"zxcoin/coin"
 	"zxcoin/testutil"
 	"zxcoin/transaction"
+	"zxcoin/types"
 )
 
 func TestBuildMerkleTree_OneNode(t *testing.T) {
@@ -21,7 +22,7 @@ func TestBuildMerkleTree_OneNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root := buildMerkleTree([][32]byte{hash})
+	root := buildMerkleTree([]types.Hash{hash})
 
 	if root.Hash != hash {
 		t.Fatalf("root не совпадает с хешем единственной транзакции. Ожидалось: %v, получено: %v", hash, root.Hash)
@@ -51,7 +52,7 @@ func TestBuildMerkleTree_TwoNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root := buildMerkleTree([][32]byte{t1Hash, t2Hash})
+	root := buildMerkleTree([]types.Hash{t1Hash, t2Hash})
 
 	expectedHash := sha256.Sum256(append(t1Hash[:], t2Hash[:]...))
 
@@ -93,7 +94,7 @@ func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
+	root := buildMerkleTree([]types.Hash{t1Hash, t2Hash, t3Hash})
 
 	t12Hash := sha256.Sum256(append(t1Hash[:], t2Hash[:]...))
 	t33Hash := sha256.Sum256(append(t3Hash[:], t3Hash[:]...))
@@ -137,8 +138,8 @@ func TestBuildMerkleTree_Twice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root1 := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
-	root2 := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
+	root1 := buildMerkleTree([]types.Hash{t1Hash, t2Hash, t3Hash})
+	root2 := buildMerkleTree([]types.Hash{t1Hash, t2Hash, t3Hash})
 
 	if root1.Hash != root2.Hash {
 		t.Fatalf("root отличается для одинаковых транзакций. Ожидалось: %v, получено: %v", root1.Hash, root2.Hash)

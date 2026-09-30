@@ -9,6 +9,7 @@ import (
 	"zxcoin/mempool"
 	"zxcoin/testutil"
 	"zxcoin/transaction"
+	"zxcoin/types"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 )
@@ -189,8 +190,8 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	mineGenesisBlock(t, &bc, repo)
 	block := block.Block{
 		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
+			PrevHash:  types.Hash{},
+			RootHash:  types.Hash{},
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{},
@@ -217,7 +218,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	b := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  genesisBlock.Header.Hash(),
-			RootHash:  [32]byte{1},
+			RootHash:  types.Hash{1},
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{},
@@ -237,8 +238,8 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	bc := NewBlockchain(1, 1, &validator)
 	block := block.Block{
 		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
+			PrevHash:  types.Hash{},
+			RootHash:  types.Hash{},
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{
@@ -319,7 +320,7 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 	validator := transaction.TransactionValidator{UtxoRepo: repo}
 	bc := NewBlockchain(1, 1, &validator)
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{TxID: [32]byte{1}}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{TxID: types.Hash{1}}}},
 		Outputs: []coin.TxOutput{{Amount: 3, Owner: publicKey}},
 	}
 
@@ -353,8 +354,8 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}}}
 	block := block.Block{
 		Header: block.BlockHeader{
-			PrevHash:  [32]byte{},
-			RootHash:  [32]byte{},
+			PrevHash:  types.Hash{},
+			RootHash:  types.Hash{},
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{tx},

@@ -6,6 +6,7 @@ import (
 	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/transaction"
+	"zxcoin/types"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 	"zxcoin/wallet"
@@ -32,7 +33,7 @@ func main() {
 
 	for i, c := range coins {
 		utxos = append(utxos, utxo.UTXO{
-			ID:     utxo.UTXOID{TxID: [32]byte{}, OutIndex: uint64(i)},
+			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
 			Output: c,
 		})
 	}

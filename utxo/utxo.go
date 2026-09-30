@@ -3,10 +3,11 @@ package utxo
 
 import (
 	"zxcoin/coin"
+	"zxcoin/types"
 )
 
 type UTXOID struct {
-	TxID     [32]byte
+	TxID     types.Hash
 	OutIndex uint64
 }
 

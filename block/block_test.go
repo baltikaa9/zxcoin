@@ -3,12 +3,13 @@ package block
 import (
 	"testing"
 	"zxcoin/transaction"
+	"zxcoin/types"
 )
 
 func TestMine(t *testing.T) {
 	difficulty := uint64(2)
 	b := Block{
-		Header:       BlockHeader{PrevHash: [32]byte{}, RootHash: [32]byte{}, Timestamp: 0},
+		Header:       BlockHeader{PrevHash: types.Hash{}, RootHash: types.Hash{}, Timestamp: 0},
 		Transactions: []transaction.Transaction{},
 	}
 	b.Mine(difficulty)

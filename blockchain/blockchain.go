@@ -8,6 +8,7 @@ import (
 	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/transaction"
+	"zxcoin/types"
 	"zxcoin/utxo"
 )
 
@@ -25,7 +26,7 @@ func NewBlockchain(difficulty uint64, award uint64, tv *transaction.TransactionV
 func (bc *Blockchain) newBlock(transactions []transaction.Transaction, creator *ecdsa.PublicKey) (block.Block, error) {
 	coinbaseTransaction := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: creator}}}
 
-	prevHash := [32]byte{}
+	prevHash := types.Hash{}
 
 	if len(bc.blocks) > 0 {
 		prevHash = bc.blocks[len(bc.blocks)-1].Header.Hash()

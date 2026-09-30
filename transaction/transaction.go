@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"math/big"
 	"zxcoin/coin"
+	"zxcoin/types"
 	"zxcoin/utxo"
 )
 
@@ -44,17 +45,17 @@ func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa
 	return t, nil
 }
 
-func (t Transaction) Hash() ([32]byte, error) {
+func (t Transaction) Hash() (types.Hash, error) {
 	data, err := t.serialize()
 
 	if err != nil {
-		return [32]byte{}, err
+		return types.Hash{}, err
 	}
 
 	return sha256.Sum256(data), nil
 }
 
-func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash [32]byte) error {
+func (in *TxInput) Sign(privateKey *ecdsa.PrivateKey, transactionHash types.Hash) error {
 	r, s, err := ecdsa.Sign(rand.Reader, privateKey, transactionHash[:])
 
 	if err != nil {
@@ -73,7 +74,7 @@ func (in *TxInput) serialize() []byte {
 	return buf
 }
 
-func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash [32]byte) bool {
+func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash types.Hash) bool {
 	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
 }
 

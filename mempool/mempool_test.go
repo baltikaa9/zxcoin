@@ -5,6 +5,7 @@ import (
 	"zxcoin/coin"
 	"zxcoin/testutil"
 	"zxcoin/transaction"
+	"zxcoin/types"
 	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 )
@@ -52,7 +53,7 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mempool := Mempool{transactions: map[[32]byte]transaction.Transaction{hash: tx}}
+	mempool := Mempool{transactions: map[types.Hash]transaction.Transaction{hash: tx}}
 	mempool.Remove(hash)
 	_, ok := mempool.transactions[hash]
 
@@ -83,7 +84,7 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	txMap := map[[32]byte]transaction.Transaction{
+	txMap := map[types.Hash]transaction.Transaction{
 		tx1Hash: tx1,
 		tx2Hash: tx2,
 	}
@@ -117,7 +118,7 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mempool := Mempool{transactions: map[[32]byte]transaction.Transaction{
+	mempool := Mempool{transactions: map[types.Hash]transaction.Transaction{
 		tx1Hash: tx1,
 		tx2Hash: tx2,
 	}}

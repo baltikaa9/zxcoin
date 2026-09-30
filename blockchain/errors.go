@@ -1,9 +1,12 @@
 package blockchain
 
-import "fmt"
+import (
+	"fmt"
+	"zxcoin/types"
+)
 
 type DoubleSpendError struct {
-	TxID     [32]byte
+	TxID     types.Hash
 	OutIndex uint64
 }
 
@@ -12,7 +15,7 @@ func (e DoubleSpendError) Error() string {
 }
 
 type InvalidNonceError struct {
-	BlockHash  [32]byte
+	BlockHash  types.Hash
 	Difficulty uint64
 }
 

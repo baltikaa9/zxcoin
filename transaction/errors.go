@@ -1,9 +1,12 @@
 package transaction
 
-import "fmt"
+import (
+	"fmt"
+	"zxcoin/types"
+)
 
 type UTXONotFoundError struct {
-	TxID     [32]byte
+	TxID     types.Hash
 	OutIndex uint64
 }
 
@@ -12,7 +15,7 @@ func (e UTXONotFoundError) Error() string {
 }
 
 type InvalidSignatureError struct {
-	TxID     [32]byte
+	TxID     types.Hash
 	OutIndex uint64
 }
 
@@ -30,7 +33,7 @@ func (e InsufficientFundsError) Error() string {
 }
 
 type ZeroOutputError struct {
-	TxID     [32]byte
+	TxID     types.Hash
 	OutIndex uint64
 }
 
@@ -39,7 +42,7 @@ func (e ZeroOutputError) Error() string {
 }
 
 type EmptyOutputsError struct {
-	TxID [32]byte
+	TxID types.Hash
 }
 
 func (e EmptyOutputsError) Error() string {
