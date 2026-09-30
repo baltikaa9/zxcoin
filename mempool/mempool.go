@@ -7,13 +7,13 @@ import (
 
 type Mempool struct {
 	transactions map[[32]byte]transaction.Transaction
-	tv           *transaction.TransactionValidator
+	validator    *transaction.TransactionValidator
 }
 
-func NewMempool(tv *transaction.TransactionValidator) *Mempool {
+func NewMempool(validator *transaction.TransactionValidator) *Mempool {
 	return &Mempool{
 		transactions: make(map[[32]byte]transaction.Transaction),
-		tv:           tv,
+		validator:    validator,
 	}
 }
 
@@ -32,7 +32,7 @@ func (m *Mempool) GetPending(limit int) []transaction.Transaction {
 }
 
 func (m *Mempool) Add(transaction transaction.Transaction) error {
-	if err := m.tv.Validate(transaction); err != nil {
+	if err := m.validator.Validate(transaction); err != nil {
 		return err
 	}
 
