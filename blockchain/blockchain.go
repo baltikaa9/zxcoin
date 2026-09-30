@@ -7,7 +7,6 @@ import (
 	"zxcoin/block"
 	"zxcoin/coin"
 	"zxcoin/mempool"
-	"zxcoin/merkle"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
 )
@@ -59,7 +58,7 @@ func (bc *Blockchain) AddBlock(block block.Block, utxoDB utxo.Repository) error 
 		return err
 	}
 
-	if err := bc.verifyMerkleRoot(block); err != nil {
+	if err := block.ValidateRootHash(); err != nil {
 		return err
 	}
 
@@ -119,20 +118,6 @@ func (bc *Blockchain) verifyProofOfWork(block block.Block) error {
 func (bc *Blockchain) verifyPrevHash(block block.Block) error {
 	if len(bc.blocks) > 0 && block.Header.PrevHash != bc.blocks[len(bc.blocks)-1].Header.Hash() {
 		return InvalidPrevHashError{}
-	}
-
-	return nil
-}
-
-func (bc *Blockchain) verifyMerkleRoot(block block.Block) error {
-	root, err := merkle.BuildMerkleTree(block.Transactions)
-
-	if err != nil {
-		return err
-	}
-
-	if block.Header.RootHash != root.Hash {
-		return InvalidMerkleRootError{}
 	}
 
 	return nil

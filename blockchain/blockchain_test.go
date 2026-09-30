@@ -7,7 +7,6 @@ import (
 	"zxcoin/block"
 	"zxcoin/coin"
 	"zxcoin/mempool"
-	"zxcoin/merkle"
 	"zxcoin/testutil"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
@@ -215,7 +214,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	validator := transaction.TransactionValidator{UtxoRepo: repo}
 	bc := NewBlockchain(1, 1, &validator)
 	genesisBlock := mineGenesisBlock(t, &bc, repo)
-	block := block.Block{
+	b := block.Block{
 		Header: block.BlockHeader{
 			PrevHash:  genesisBlock.Header.Hash(),
 			RootHash:  [32]byte{1},
@@ -223,10 +222,10 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{},
 	}
-	block.Mine(bc.currentDifficulty)
-	err := bc.AddBlock(block, repo)
+	b.Mine(bc.currentDifficulty)
+	err := bc.AddBlock(b, repo)
 
-	if _, ok := errors.AsType[InvalidMerkleRootError](err); !ok {
+	if _, ok := errors.AsType[block.InvalidMerkleRootError](err); !ok {
 		t.Fatalf("ожидалась InvalidMerkleRootError, получено: %v", err)
 	}
 }
@@ -323,26 +322,26 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{TxID: [32]byte{1}}}},
 		Outputs: []coin.TxOutput{{Amount: 3, Owner: publicKey}},
 	}
-	coinbaseTx := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: bc.currentAward, Owner: publicKey}},
-	}
 
-	block, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
+	b, err := bc.newBlock([]transaction.Transaction{tx}, publicKey)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	root, err := merkle.BuildMerkleTree([]transaction.Transaction{tx, coinbaseTx})
+	if err := b.ValidateRootHash(); err != nil {
+		t.Fatalf("корень Merkle tree некорректен: %v", err)
+	}
 
-	if err != nil {
+	blockWithoutCoinbase := b
+	blockWithoutCoinbase.Transactions = b.Transactions[:len(b.Transactions)-1]
+
+	if err := blockWithoutCoinbase.CalculateRootHash(); err != nil {
 		t.Fatal(err)
 	}
 
-	expectedHash := root.Hash
-
-	if block.Header.RootHash != expectedHash {
-		t.Fatalf("RootHash не совпадает. Ожидалось: %v, получено: %v", expectedHash, block.Header.RootHash)
+	if b.Header.RootHash == blockWithoutCoinbase.Header.RootHash {
+		t.Fatal("RootHash не зависит от coinbase-транзакции")
 	}
 }
 

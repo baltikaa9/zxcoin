@@ -4,7 +4,6 @@ package block
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"zxcoin/merkle"
 	"zxcoin/transaction"
 )
 
@@ -55,13 +54,43 @@ func (b *Block) Mine(difficulty uint64) {
 }
 
 func (b *Block) CalculateRootHash() error {
-	merkleTree, err := merkle.BuildMerkleTree(b.Transactions)
+	txHashes, err := b.getTxHashes()
 
 	if err != nil {
 		return err
 	}
 
-	b.Header.RootHash = merkleTree.Hash
+	b.Header.RootHash = buildMerkleTree(txHashes).Hash
 
-	return err
+	return nil
+}
+
+func (b Block) ValidateRootHash() error {
+	txHashes, err := b.getTxHashes()
+
+	if err != nil {
+		return err
+	}
+
+	if b.Header.RootHash != buildMerkleTree(txHashes).Hash {
+		return InvalidMerkleRootError{}
+	}
+
+	return nil
+}
+
+func (b Block) getTxHashes() ([][32]byte, error) {
+	txHashes := make([][32]byte, 0, len(b.Transactions))
+
+	for _, tx := range b.Transactions {
+		hash, err := tx.Hash()
+
+		if err != nil {
+			return nil, err
+		}
+
+		txHashes = append(txHashes, hash)
+	}
+
+	return txHashes, nil
 }

@@ -1,4 +1,4 @@
-package merkle
+package block
 
 import (
 	"crypto/sha256"
@@ -15,17 +15,13 @@ func TestBuildMerkleTree_OneNode(t *testing.T) {
 		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 
-	root, err := BuildMerkleTree([]transaction.Transaction{tx})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	hash, err := tx.Hash()
 
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	root := buildMerkleTree([][32]byte{hash})
 
 	if root.Hash != hash {
 		t.Fatalf("root не совпадает с хешем единственной транзакции. Ожидалось: %v, получено: %v", hash, root.Hash)
@@ -43,12 +39,6 @@ func TestBuildMerkleTree_TwoNodes(t *testing.T) {
 		Outputs: []coin.TxOutput{{Amount: 10, Owner: publicKey}},
 	}
 
-	root, err := BuildMerkleTree([]transaction.Transaction{t1, t2})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	t1Hash, err := t1.Hash()
 
 	if err != nil {
@@ -60,6 +50,8 @@ func TestBuildMerkleTree_TwoNodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	root := buildMerkleTree([][32]byte{t1Hash, t2Hash})
 
 	expectedHash := sha256.Sum256(append(t1Hash[:], t2Hash[:]...))
 
@@ -83,12 +75,6 @@ func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
 		Outputs: []coin.TxOutput{{Amount: 15, Owner: publicKey}},
 	}
 
-	root, err := BuildMerkleTree([]transaction.Transaction{t1, t2, t3})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	t1Hash, err := t1.Hash()
 
 	if err != nil {
@@ -106,6 +92,8 @@ func TestBuildMerkleTree_ThreeNodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	root := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
 
 	t12Hash := sha256.Sum256(append(t1Hash[:], t2Hash[:]...))
 	t33Hash := sha256.Sum256(append(t3Hash[:], t3Hash[:]...))
@@ -131,17 +119,26 @@ func TestBuildMerkleTree_Twice(t *testing.T) {
 		Outputs: []coin.TxOutput{{Amount: 15, Owner: publicKey}},
 	}
 
-	root1, err := BuildMerkleTree([]transaction.Transaction{t1, t2, t3})
+	t1Hash, err := t1.Hash()
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	root2, err := BuildMerkleTree([]transaction.Transaction{t1, t2, t3})
+	t2Hash, err := t2.Hash()
 
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t3Hash, err := t3.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	root1 := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
+	root2 := buildMerkleTree([][32]byte{t1Hash, t2Hash, t3Hash})
 
 	if root1.Hash != root2.Hash {
 		t.Fatalf("root отличается для одинаковых транзакций. Ожидалось: %v, получено: %v", root1.Hash, root2.Hash)

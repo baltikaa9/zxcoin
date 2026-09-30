@@ -26,12 +26,6 @@ func (e InvalidPrevHashError) Error() string {
 	return "неверный предыдущий блок"
 }
 
-type InvalidMerkleRootError struct{}
-
-func (e InvalidMerkleRootError) Error() string {
-	return "неверный хеш корня дерева Меркла"
-}
-
 type MoreOneCoinbaseError struct{}
 
 func (e MoreOneCoinbaseError) Error() string {
