@@ -18,11 +18,11 @@ func NewMempool(validator *transaction.TransactionValidator) *Mempool {
 	}
 }
 
-func (m *Mempool) GetPending(limit int) []transaction.Transaction {
+func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 	var result []transaction.Transaction
 
 	for _, tx := range m.transactions {
-		if len(result) >= limit {
+		if len(result) >= int(limit) {
 			break
 		}
 

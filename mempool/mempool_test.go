@@ -13,7 +13,7 @@ import (
 func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := transaction.TransactionValidator{UtxoRepo: repo}
+	validator := transaction.NewValidator(repo)
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 	tx := transaction.Transaction{
@@ -27,7 +27,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	tx.Inputs[0].Sign(privateKey, hash)
-	mempool := NewMempool(&validator)
+	mempool := NewMempool(validator)
 	err = mempool.Add(tx)
 
 	if err != nil {
@@ -122,10 +122,10 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 		tx1Hash: tx1,
 		tx2Hash: tx2,
 	}}
-	limit := 1
+	limit := uint64(1)
 	txs := mempool.GetPending(limit)
 
-	if len(txs) != limit {
+	if len(txs) != int(limit) {
 		t.Fatalf("неверное количество транзакций: ожидалось %v, вернулось %v", limit, len(txs))
 	}
 }

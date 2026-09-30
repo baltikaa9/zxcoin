@@ -54,6 +54,18 @@ func (b *Block) Mine(difficulty uint64) {
 	}
 }
 
+func (b Block) ValidateProofOfWork(difficulty uint64) error {
+	hash := b.Header.Hash()
+
+	for i := range difficulty {
+		if hash[i] != 0 {
+			return InvalidNonceError{BlockHash: hash, Difficulty: difficulty}
+		}
+	}
+
+	return nil
+}
+
 func (b *Block) CalculateRootHash() error {
 	txHashes, err := b.getTxHashes()
 

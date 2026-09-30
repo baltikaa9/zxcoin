@@ -15,7 +15,11 @@ import (
 func main() {
 	repo := inmemory.NewRepository()
 	tracker := wallet.NewReservationTracker()
-	validator := transaction.TransactionValidator{UtxoRepo: repo}
+	validator := transaction.NewValidator(repo)
+	mp := mempool.NewMempool(validator)
+	bc := blockchain.NewBlockchain(2, 42)
+
+	bs := blockchain.NewBlockchainService(bc, repo, validator, mp)
 
 	myWallet := wallet.NewWallet(tracker, repo)
 	otherWallet := wallet.NewWallet(tracker, repo)
@@ -45,7 +49,6 @@ func main() {
 			panic(err)
 		}
 	}
-	mp := mempool.NewMempool(&validator)
 
 	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
 
@@ -71,9 +74,7 @@ func main() {
 		panic(err)
 	}
 
-	bc := blockchain.NewBlockchain(2, 42, &validator)
-
-	if _, err := bc.MineAndAddBlock(mp, repo, 3, myWallet.PublicKey); err != nil {
+	if _, err := bs.MineAndAddBlock(3, myWallet.PublicKey); err != nil {
 		panic(err)
 	}
 

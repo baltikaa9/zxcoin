@@ -3,7 +3,11 @@ package transaction
 import "zxcoin/utxo"
 
 type TransactionValidator struct {
-	UtxoRepo utxo.Repository
+	repo utxo.Repository
+}
+
+func NewValidator(utxoRepo utxo.Repository) *TransactionValidator {
+	return &TransactionValidator{repo: utxoRepo}
 }
 
 func (v TransactionValidator) Validate(tx Transaction) error {
@@ -28,7 +32,7 @@ func (v TransactionValidator) loadInputs(tx Transaction) ([]utxo.UTXO, error) {
 	spent := make([]utxo.UTXO, 0, len(tx.Inputs))
 
 	for _, input := range tx.Inputs {
-		u, exists, err := v.UtxoRepo.FindByID(input.ID)
+		u, exists, err := v.repo.FindByID(input.ID)
 
 		if err != nil {
 			return nil, err
