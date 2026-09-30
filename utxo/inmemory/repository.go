@@ -51,14 +51,14 @@ func (r *Repository) Begin() (utxo.Transaction, error) {
 	}
 
 	return &transaction{
-		repositoty: r,
+		repository: r,
 		db:         newMap,
 		closed:     false,
 	}, nil
 }
 
 type transaction struct {
-	repositoty *Repository
+	repository *Repository
 	db         map[utxo.UTXOID]utxo.UTXO
 	closed     bool
 }
@@ -111,7 +111,7 @@ func (t *transaction) Commit() error {
 		return errTransactionClosed
 	}
 
-	t.repositoty.db = t.db
+	t.repository.db = t.db
 	t.closed = true
 
 	return nil
