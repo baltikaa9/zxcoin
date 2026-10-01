@@ -5,6 +5,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"os"
 	"zxcoin/coin"
 	"zxcoin/transaction"
 	"zxcoin/utxo"
@@ -26,6 +30,15 @@ func NewWallet(tracker *ReservationTracker, utxoRepo utxo.Repository) Wallet {
 		panic(err)
 	}
 
+	return Wallet{
+		PrivateKey:         privateKey,
+		PublicKey:          &privateKey.PublicKey,
+		reservationTracker: tracker,
+		utxoRepo:           utxoRepo,
+	}
+}
+
+func LoadWallet(privateKey *ecdsa.PrivateKey, tracker *ReservationTracker, utxoRepo utxo.Repository) Wallet {
 	return Wallet{
 		PrivateKey:         privateKey,
 		PublicKey:          &privateKey.PublicKey,
@@ -95,4 +108,41 @@ func (w Wallet) createOutputs(to *ecdsa.PublicKey, amount uint64, total uint64) 
 	}
 
 	return outputs
+}
+
+func SavePrivateKey(path string, key *ecdsa.PrivateKey) error {
+	der, err := x509.MarshalECPrivateKey(key)
+
+	if err != nil {
+		return err
+	}
+
+	data := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: der,
+	})
+
+	return os.WriteFile(path, data, 0600)
+}
+
+func LoadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
+	data, err := os.ReadFile(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(data)
+
+	if block == nil {
+		return nil, fmt.Errorf("invalid PEM private key")
+	}
+
+	key, err := x509.ParseECPrivateKey(block.Bytes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }

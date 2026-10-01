@@ -4,8 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"zxcoin/blockchain"
+
+	// "zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/transaction"
+
+	// "zxcoin/types"
+	// "zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
 	"zxcoin/utxo/sqlite"
 	"zxcoin/wallet"
@@ -36,20 +41,32 @@ func main() {
 
 	bs := blockchain.NewBlockchainService(bc, repo, validator, mp)
 
-	myWallet := wallet.NewWallet(tracker, repo)
-	otherWallet := wallet.NewWallet(tracker, repo)
+	myWalletKey, err := wallet.LoadPrivateKey("wallet.key")
 
-	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
+	if err != nil {
+		panic(err)
+	}
 
-	// 	coins := []coin.TxOutput{
-	// 		{Amount: 5, Owner: myWallet.PublicKey},
-	// 		{Amount: 3, Owner: myWallet.PublicKey},
-	// 		{Amount: 11, Owner: myWallet.PublicKey},
-	// 		{Amount: 10, Owner: myWallet.PublicKey},
-	// 	}
-	//
-	// 	utxos := make([]utxo.UTXO, 0, len(coins))
-	//
+	otherWalletKey, err := wallet.LoadPrivateKey("other.key")
+
+	if err != nil {
+		panic(err)
+	}
+
+	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo)
+	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo)
+
+	// fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
+
+	// coins := []coin.TxOutput{
+	// {Amount: 5, Owner: myWallet.PublicKey},
+	// {Amount: 3, Owner: myWallet.PublicKey},
+	// {Amount: 11, Owner: myWallet.PublicKey},
+	// {Amount: 10, Owner: myWallet.PublicKey},
+	// }
+
+	// utxos := make([]utxo.UTXO, 0, len(coins))
+
 	// 	for i, c := range coins {
 	// 		utxos = append(utxos, utxo.UTXO{
 	// 			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
@@ -71,11 +88,11 @@ func main() {
 		panic(err)
 	}
 
-	t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1)
+	// t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 0)
 
-	if err != nil {
-		panic(err)
-	}
+	// if err != nil {
+	// panic(err)
+	// }
 
 	my, _ := repo.FindByOwner(myWallet.PublicKey)
 	other, _ := repo.FindByOwner(otherWallet.PublicKey)
@@ -85,9 +102,9 @@ func main() {
 		panic(err)
 	}
 
-	if err := mp.Add(t2); err != nil {
-		panic(err)
-	}
+	// if err := mp.Add(t2); err != nil {
+	// panic(err)
+	// }
 
 	if _, err := bs.MineAndAddBlock(3, myWallet.PublicKey); err != nil {
 		panic(err)
