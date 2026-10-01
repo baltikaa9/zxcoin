@@ -1,19 +1,34 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"zxcoin/blockchain"
-	"zxcoin/coin"
 	"zxcoin/mempool"
 	"zxcoin/transaction"
-	"zxcoin/types"
-	"zxcoin/utxo"
 	"zxcoin/utxo/inmemory"
+	"zxcoin/utxo/sqlite"
 	"zxcoin/wallet"
+
+	_ "modernc.org/sqlite"
 )
 
 func main() {
-	repo := inmemory.NewRepository()
+	db, err := sql.Open("sqlite", "zxcoin.db")
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		panic(err)
+	}
+
+	_ = inmemory.NewRepository()
+	repo := sqlite.NewRepository(db)
+
 	tracker := wallet.NewReservationTracker()
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator)
@@ -26,29 +41,29 @@ func main() {
 
 	fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
-	coins := []coin.TxOutput{
-		{Amount: 5, Owner: myWallet.PublicKey},
-		{Amount: 3, Owner: myWallet.PublicKey},
-		{Amount: 11, Owner: myWallet.PublicKey},
-		{Amount: 10, Owner: myWallet.PublicKey},
-	}
-
-	utxos := make([]utxo.UTXO, 0, len(coins))
-
-	for i, c := range coins {
-		utxos = append(utxos, utxo.UTXO{
-			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
-			Output: c,
-		})
-	}
-
-	for _, u := range utxos {
-		err := repo.Save(u)
-
-		if err != nil {
-			panic(err)
-		}
-	}
+	// 	coins := []coin.TxOutput{
+	// 		{Amount: 5, Owner: myWallet.PublicKey},
+	// 		{Amount: 3, Owner: myWallet.PublicKey},
+	// 		{Amount: 11, Owner: myWallet.PublicKey},
+	// 		{Amount: 10, Owner: myWallet.PublicKey},
+	// 	}
+	//
+	// 	utxos := make([]utxo.UTXO, 0, len(coins))
+	//
+	// 	for i, c := range coins {
+	// 		utxos = append(utxos, utxo.UTXO{
+	// 			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
+	// 			Output: c,
+	// 		})
+	// 	}
+	//
+	// 	for _, u := range utxos {
+	// 		err := repo.Save(u)
+	//
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 	}
 
 	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
 
