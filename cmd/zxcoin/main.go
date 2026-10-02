@@ -4,17 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/baltikaa9/zxcoin/blockchain"
-
-	// "github.com/baltikaa9/zxcoin/coin"
-	"github.com/baltikaa9/zxcoin/mempool"
-	"github.com/baltikaa9/zxcoin/transaction"
-
-	// "github.com/baltikaa9/zxcoin/types"
-	// "github.com/baltikaa9/zxcoin/utxo"
-	"github.com/baltikaa9/zxcoin/utxo/inmemory"
-	"github.com/baltikaa9/zxcoin/utxo/sqlite"
-	"github.com/baltikaa9/zxcoin/wallet"
+	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
+	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
+	appblockchain "github.com/baltikaa9/zxcoin/app/blockchain"
+	"github.com/baltikaa9/zxcoin/app/mempool"
+	"github.com/baltikaa9/zxcoin/app/transaction"
+	"github.com/baltikaa9/zxcoin/app/wallet"
+	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
 
 	_ "modernc.org/sqlite"
 )
@@ -40,7 +36,7 @@ func main() {
 	mp := mempool.NewMempool(validator)
 	bc := blockchain.NewBlockchain(2, 42)
 
-	bs := blockchain.NewBlockchainService(bc, repo, validator, mp)
+	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp)
 
 	myWalletKey, err := wallet.LoadPrivateKey("wallet.key")
 
