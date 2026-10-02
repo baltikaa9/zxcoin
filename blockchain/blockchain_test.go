@@ -4,14 +4,15 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"testing"
-	"zxcoin/block"
-	"zxcoin/coin"
-	"zxcoin/mempool"
-	"zxcoin/testutil"
-	"zxcoin/transaction"
-	"zxcoin/types"
-	"zxcoin/utxo"
-	"zxcoin/utxo/inmemory"
+
+	"github.com/baltikaa9/zxcoin/block"
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/mempool"
+	"github.com/baltikaa9/zxcoin/testutil"
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
+	"github.com/baltikaa9/zxcoin/utxo"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
 )
 
 func newBlockchainService(t *testing.T, difficulty int, award int) *BlockchainService {

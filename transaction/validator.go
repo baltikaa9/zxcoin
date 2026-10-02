@@ -1,6 +1,6 @@
 package transaction
 
-import "zxcoin/utxo"
+import "github.com/baltikaa9/zxcoin/utxo"
 
 type TransactionValidator struct {
 	repo utxo.Repository

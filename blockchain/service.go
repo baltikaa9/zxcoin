@@ -4,12 +4,13 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"time"
-	"zxcoin/block"
-	"zxcoin/coin"
-	"zxcoin/mempool"
-	"zxcoin/transaction"
-	"zxcoin/types"
-	"zxcoin/utxo"
+
+	"github.com/baltikaa9/zxcoin/block"
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/mempool"
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
+	"github.com/baltikaa9/zxcoin/utxo"
 )
 
 type BlockchainService struct {

@@ -4,8 +4,9 @@ import (
 	"errors"
 	"math/big"
 	"testing"
-	"zxcoin/coin"
-	"zxcoin/testutil"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/testutil"
 )
 
 func TestSerialize_NilPublicKey(t *testing.T) {

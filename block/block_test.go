@@ -2,8 +2,9 @@ package block
 
 import (
 	"testing"
-	"zxcoin/transaction"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 func TestMine(t *testing.T) {

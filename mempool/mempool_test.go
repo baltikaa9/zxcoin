@@ -2,12 +2,13 @@ package mempool
 
 import (
 	"testing"
-	"zxcoin/coin"
-	"zxcoin/testutil"
-	"zxcoin/transaction"
-	"zxcoin/types"
-	"zxcoin/utxo"
-	"zxcoin/utxo/inmemory"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/testutil"
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
+	"github.com/baltikaa9/zxcoin/utxo"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
 )
 
 func TestAdd(t *testing.T) {

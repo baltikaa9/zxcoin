@@ -3,17 +3,18 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"zxcoin/blockchain"
 
-	// "zxcoin/coin"
-	"zxcoin/mempool"
-	"zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/blockchain"
 
-	// "zxcoin/types"
-	// "zxcoin/utxo"
-	"zxcoin/utxo/inmemory"
-	"zxcoin/utxo/sqlite"
-	"zxcoin/wallet"
+	// "github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/mempool"
+	"github.com/baltikaa9/zxcoin/transaction"
+
+	// "github.com/baltikaa9/zxcoin/types"
+	// "github.com/baltikaa9/zxcoin/utxo"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
+	"github.com/baltikaa9/zxcoin/utxo/sqlite"
+	"github.com/baltikaa9/zxcoin/wallet"
 
 	_ "modernc.org/sqlite"
 )

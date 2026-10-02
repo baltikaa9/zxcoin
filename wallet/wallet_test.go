@@ -4,11 +4,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"testing"
-	"zxcoin/coin"
-	"zxcoin/testutil"
-	"zxcoin/types"
-	"zxcoin/utxo"
-	"zxcoin/utxo/inmemory"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/testutil"
+	"github.com/baltikaa9/zxcoin/types"
+	"github.com/baltikaa9/zxcoin/utxo"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
 )
 
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {

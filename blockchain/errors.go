@@ -2,7 +2,8 @@ package blockchain
 
 import (
 	"fmt"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 type DoubleSpendError struct {

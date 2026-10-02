@@ -3,7 +3,8 @@ package inmemory
 import (
 	"crypto/ecdsa"
 	"errors"
-	"zxcoin/utxo"
+
+	"github.com/baltikaa9/zxcoin/utxo"
 )
 
 var errTransactionClosed = errors.New("transaction is closed")

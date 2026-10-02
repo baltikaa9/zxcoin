@@ -2,7 +2,7 @@
 package blockchain
 
 import (
-	"zxcoin/block"
+	"github.com/baltikaa9/zxcoin/block"
 )
 
 type Blockchain struct {

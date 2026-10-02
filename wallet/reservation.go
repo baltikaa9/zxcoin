@@ -1,6 +1,6 @@
 package wallet
 
-import "zxcoin/utxo"
+import "github.com/baltikaa9/zxcoin/utxo"
 
 type ReservationTracker struct {
 	reserved map[utxo.UTXOID]struct{}

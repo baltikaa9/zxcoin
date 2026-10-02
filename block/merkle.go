@@ -2,7 +2,8 @@ package block
 
 import (
 	"crypto/sha256"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 type Node struct {

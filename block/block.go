@@ -4,8 +4,9 @@ package block
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"zxcoin/transaction"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 type BlockHeader struct {

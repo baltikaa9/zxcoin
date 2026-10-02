@@ -2,7 +2,8 @@ package transaction
 
 import (
 	"fmt"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 type UTXONotFoundError struct {

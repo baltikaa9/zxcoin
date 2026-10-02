@@ -3,10 +3,11 @@ package transaction
 import (
 	"errors"
 	"testing"
-	"zxcoin/coin"
-	"zxcoin/testutil"
-	"zxcoin/utxo"
-	"zxcoin/utxo/inmemory"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/testutil"
+	"github.com/baltikaa9/zxcoin/utxo"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
 )
 
 func TestValidate_UTXONotFound(t *testing.T) {

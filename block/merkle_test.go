@@ -3,10 +3,11 @@ package block
 import (
 	"crypto/sha256"
 	"testing"
-	"zxcoin/coin"
-	"zxcoin/testutil"
-	"zxcoin/transaction"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/testutil"
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 func TestBuildMerkleTree_OneNode(t *testing.T) {

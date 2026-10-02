@@ -9,9 +9,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"zxcoin/coin"
-	"zxcoin/transaction"
-	"zxcoin/utxo"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/transaction"
+	"github.com/baltikaa9/zxcoin/utxo"
 )
 
 type Wallet struct {

@@ -2,7 +2,8 @@ package block
 
 import (
 	"fmt"
-	"zxcoin/types"
+
+	"github.com/baltikaa9/zxcoin/types"
 )
 
 type InvalidMerkleRootError struct{}

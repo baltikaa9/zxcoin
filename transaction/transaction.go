@@ -7,9 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"math/big"
-	"zxcoin/coin"
-	"zxcoin/types"
-	"zxcoin/utxo"
+
+	"github.com/baltikaa9/zxcoin/coin"
+	"github.com/baltikaa9/zxcoin/types"
+	"github.com/baltikaa9/zxcoin/utxo"
 )
 
 type TxInput struct {

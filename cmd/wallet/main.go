@@ -1,8 +1,8 @@
 package main
 
 import (
-	"zxcoin/utxo/inmemory"
-	"zxcoin/wallet"
+	"github.com/baltikaa9/zxcoin/utxo/inmemory"
+	"github.com/baltikaa9/zxcoin/wallet"
 )
 
 func main() {
