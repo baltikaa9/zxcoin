@@ -5,8 +5,10 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -31,6 +33,77 @@ type TransactionDto struct {
 	Outputs []OutputDto `json:"outputs"`
 }
 
+func (d TransactionDto) Validate() error {
+	if len(d.Inputs) == 0 {
+		return errors.New("не заполнено поле inputs")
+	}
+
+	if len(d.Outputs) == 0 {
+		return errors.New("не заполнено поле outputs")
+	}
+
+	for i, input := range d.Inputs {
+		if err := validateHexField(
+			fmt.Sprintf("inputs[%d].txID", i),
+			input.TxID,
+			32,
+		); err != nil {
+			return err
+		}
+
+		if err := validateHexField(
+			fmt.Sprintf("inputs[%d].signature", i),
+			input.Signature,
+			64,
+		); err != nil {
+			return err
+		}
+	}
+
+	for i, output := range d.Outputs {
+		if output.Amount == 0 {
+			return fmt.Errorf("outputs[%d].amount must be greater than zero", i)
+		}
+
+		if err := validateHexField(
+			fmt.Sprintf("outputs[%d].publicKey", i),
+			output.PublicKey,
+			65,
+		); err != nil {
+			return err
+		}
+
+		if output.PublicKey[:2] != "04" {
+			return fmt.Errorf("outputs[%d].publicKey must be uncompressed", i)
+		}
+	}
+
+	return nil
+}
+
+func validateHexField(field string, value string, expectedBytes int) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+
+	decoded, err := hex.DecodeString(value)
+
+	if err == nil {
+		return fmt.Errorf("%s must be valid hex", field)
+	}
+
+	if len(decoded) != expectedBytes {
+		return fmt.Errorf(
+			"%s must contain %d bytes, got %d",
+			field,
+			expectedBytes,
+			len(decoded),
+		)
+	}
+
+	return nil
+}
+
 type MempoolHandler struct {
 	mempool *mempool.Mempool
 }
@@ -46,8 +119,20 @@ func NewMempoolHandler(
 func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
 	var data TransactionDto
 
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&data); err != nil {
 		http.Error(w, fmt.Sprintf("parse error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if err := data.Validate(); err != nil {
+		http.Error(
+			w,
+			fmt.Sprintf("validation error: %v", err),
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -55,25 +140,8 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	var outputs []coin.TxOutput
 
 	for _, input := range data.Inputs {
-		txIDBytes, err := hex.DecodeString(input.TxID)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("decode txID error: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		if len(txIDBytes) != 32 {
-			http.Error(w, fmt.Sprintf("invalid txID len: %d", len(txIDBytes)), http.StatusBadRequest)
-			return
-		}
-
-		signatureBytes, err := hex.DecodeString(input.Signature)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("decode signature error: %v", err), http.StatusBadRequest)
-			return
-		}
-
+		txIDBytes, _ := hex.DecodeString(input.TxID)
+		signatureBytes, _ := hex.DecodeString(input.Signature)
 		signature, err := transaction.ParseSignature(signatureBytes)
 
 		if err != nil {
@@ -91,13 +159,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for _, output := range data.Outputs {
-		publicKeyBytes, err := hex.DecodeString(output.PublicKey)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("не удалось декодировать публичный ключ: %v", err), http.StatusBadRequest)
-			return
-		}
-
+		publicKeyBytes, _ := hex.DecodeString(output.PublicKey)
 		publicKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), publicKeyBytes)
 
 		if err != nil {
@@ -119,6 +181,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response, err := transactionToDto(tx)
+
 	if err != nil {
 		http.Error(
 			w,
