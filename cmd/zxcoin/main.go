@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
@@ -53,6 +54,10 @@ func main() {
 	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo)
 	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo)
 
+	pk, _ := myWallet.PublicKey.Bytes()
+
+	fmt.Println("key:", hex.EncodeToString(pk))
+
 	// fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
 
 	// coins := []coin.TxOutput{
@@ -85,6 +90,24 @@ func main() {
 		panic(err)
 	}
 
+	for _, i := range t1.Inputs {
+		fmt.Printf("txID: %v\noutIndex: %v\nsignature: %v\n\n", i.ID.TxID, i.ID.OutIndex, hex.EncodeToString(i.Signature.Marshal()))
+	}
+
+	for _, o := range t1.Outputs {
+		ownerBytes, err := o.Owner.Bytes()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("amount: %v\nowner: %v\n\n", o.Amount, hex.EncodeToString(ownerBytes))
+	}
+
+	// for _, i := range t1.Inputs {
+	// fmt.Println(t1.Hash())
+	// fmt.Println(string(i.Signature.R.Bytes()))
+	// fmt.Println(string(i.Signature.S.Bytes()))
+	// }
+
 	// t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 0)
 
 	// if err != nil {
@@ -103,7 +126,7 @@ func main() {
 	// panic(err)
 	// }
 
-	if _, err := bs.MineAndAddBlock(3, myWallet.PublicKey); err != nil {
+	if _, err := bs.MineAndAddBlock(0, myWallet.PublicKey); err != nil {
 		panic(err)
 	}
 

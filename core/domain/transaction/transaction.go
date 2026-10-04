@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -21,6 +22,26 @@ type TxInput struct {
 type Signature struct {
 	R *big.Int
 	S *big.Int
+}
+
+func (s Signature) Marshal() []byte {
+	raw := make([]byte, 64)
+
+	s.R.FillBytes(raw[:32])
+	s.S.FillBytes(raw[32:])
+
+	return raw
+}
+
+func ParseSignature(raw []byte) (Signature, error) {
+	if len(raw) != 64 {
+		return Signature{}, fmt.Errorf("неверная длина подписи: %d", len(raw))
+	}
+
+	return Signature{
+		R: new(big.Int).SetBytes(raw[:32]),
+		S: new(big.Int).SetBytes(raw[32:]),
+	}, nil
 }
 
 type Transaction struct {
