@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/baltikaa9/zxcoin/adapters/http/handlers"
+	"github.com/baltikaa9/zxcoin/adapters/http/middleware"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/app/transaction"
@@ -34,7 +35,7 @@ func main() {
 	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp).AddTransaction)
 	// mux.HandleFunc("POST /mine", nil)
 
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", middleware.JSONMiddleware(mux)); err != nil {
 		panic(err)
 	}
 }
