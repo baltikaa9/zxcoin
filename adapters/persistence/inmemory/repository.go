@@ -4,8 +4,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 
-	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
+	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
 var errTransactionClosed = errors.New("transaction is closed")

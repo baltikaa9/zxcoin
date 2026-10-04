@@ -7,7 +7,6 @@ import (
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
 	"github.com/baltikaa9/zxcoin/app/mempool"
-	"github.com/baltikaa9/zxcoin/core/testutil"
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/core/domain/block"
@@ -16,6 +15,7 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
+	"github.com/baltikaa9/zxcoin/core/testutil"
 )
 
 func newBlockchainService(t *testing.T, difficulty int, award int) *BlockchainService {
