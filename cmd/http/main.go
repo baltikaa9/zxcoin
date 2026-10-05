@@ -31,7 +31,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// mux.HandleFunc("POST /health", nil)
+	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp).AddTransaction)
 	// mux.HandleFunc("POST /mine", nil)
 
