@@ -5,8 +5,8 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/baltikaa9/zxcoin/app/utxo"
 )
@@ -17,8 +17,8 @@ type UTXODTO struct {
 	Amount   uint64 `json:"amount"`
 }
 
-type ResponseDTO struct {
-	UTXOS []UTXODTO `json:"utxos"`
+type UTXOResponseDTO struct {
+	UTXOs []UTXODTO `json:"utxos"`
 	Sum   uint64    `json:"sum"`
 }
 
@@ -31,24 +31,17 @@ func NewUTXOHandler(repo utxo.Repository) *UTXOHandler {
 }
 
 func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
-	owner := r.PathValue("owner")
-
-	if strings.TrimSpace(owner) == "" {
-		http.Error(w, "не указан публичный ключ владельца", http.StatusBadRequest)
-		return
-	}
-
-	publicKeyBytes, err := hex.DecodeString(owner)
+	publicKeyBytes, err := hex.DecodeString(r.PathValue("owner"))
 
 	if err != nil {
-		http.Error(w, "владелец должен быть в формате hex", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	publicKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), publicKeyBytes)
 
 	if err != nil {
-		http.Error(w, "некорректный публичный ключ", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -72,7 +65,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if err := json.NewEncoder(w).Encode(ResponseDTO{UTXOS: utxosDTO, Sum: sum}); err != nil {
+	if err := json.NewEncoder(w).Encode(UTXOResponseDTO{UTXOs: utxosDTO, Sum: sum}); err != nil {
 		return
 	}
 }
