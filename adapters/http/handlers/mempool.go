@@ -169,7 +169,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 
 		outputs = append(outputs, coin.TxOutput{
 			Amount: output.Amount,
-			Owner:  publicKey,
+			Owner:  types.PublicKey{PublicKey: publicKey},
 		})
 	}
 

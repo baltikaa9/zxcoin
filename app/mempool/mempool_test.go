@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
+	"github.com/baltikaa9/zxcoin/app/logger"
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
@@ -16,6 +17,8 @@ func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
 	validator := apptransaction.NewValidator(repo)
+	logger := logger.Nop()
+	mempool := NewMempool(validator, logger)
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 	tx := transaction.Transaction{
@@ -29,7 +32,6 @@ func TestAdd(t *testing.T) {
 	}
 
 	tx.Inputs[0].Sign(privateKey, hash)
-	mempool := NewMempool(validator)
 	err = mempool.Add(tx)
 
 	if err != nil {

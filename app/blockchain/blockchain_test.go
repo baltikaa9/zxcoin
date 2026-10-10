@@ -1,11 +1,11 @@
 package blockchain
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
+	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
@@ -23,13 +23,15 @@ func newBlockchainService(t *testing.T, difficulty int, award int) *BlockchainSe
 	bc := blockchain.NewBlockchain(uint64(difficulty), uint64(award))
 	repo := inmemory.NewRepository()
 	validator := apptransaction.NewValidator(repo)
-	mp := mempool.NewMempool(validator)
+	logger := logger.Nop()
+	mp := mempool.NewMempool(validator, logger)
 
 	return NewBlockchainService(
 		bc,
 		repo,
 		validator,
 		mp,
+		logger,
 	)
 }
 
@@ -53,7 +55,7 @@ func mineGenesisBlock(t *testing.T, bs *BlockchainService) block.Block {
 	return genesisBlock
 }
 
-func assertUTXO(t *testing.T, repo apputxo.Repository, id utxo.UTXOID, expectedAmount uint64, expectedOwner *ecdsa.PublicKey) {
+func assertUTXO(t *testing.T, repo apputxo.Repository, id utxo.UTXOID, expectedAmount uint64, expectedOwner types.PublicKey) {
 	t.Helper()
 	u, existed, err := repo.FindByID(id)
 

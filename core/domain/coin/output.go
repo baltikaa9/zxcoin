@@ -2,17 +2,18 @@
 package coin
 
 import (
-	"crypto/ecdsa"
 	"encoding/binary"
+
+	"github.com/baltikaa9/zxcoin/core/domain/types"
 )
 
 type TxOutput struct {
 	Amount uint64
-	Owner  *ecdsa.PublicKey
+	Owner  types.PublicKey
 }
 
 func (o TxOutput) Serialize() ([]byte, error) {
-	if o.Owner == nil {
+	if o.Owner.PublicKey == nil {
 		return nil, NilPublicKeyError{}
 	}
 

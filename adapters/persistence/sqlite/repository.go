@@ -24,7 +24,7 @@ func (r *Repository) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
 	return findByID(r.db, id)
 }
 
-func (r *Repository) FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
+func (r *Repository) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	return findByOwner(r.db, owner)
 }
 
@@ -56,7 +56,7 @@ func (t *transaction) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
 	return findByID(t.db, id)
 }
 
-func (t *transaction) FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
+func (t *transaction) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	return findByOwner(t.db, owner)
 }
 
@@ -111,7 +111,7 @@ func findByID(e execer, id utxo.UTXOID) (utxo.UTXO, bool, error) {
 	}, true, nil
 }
 
-func findByOwner(e execer, owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
+func findByOwner(e execer, owner types.PublicKey) ([]utxo.UTXO, error) {
 	ownerBytes, err := owner.Bytes()
 
 	if err != nil {
@@ -187,6 +187,12 @@ func deleteByID(e execer, id utxo.UTXOID) error {
 	return err
 }
 
-func decodePublicKey(b []byte) (*ecdsa.PublicKey, error) {
-	return ecdsa.ParseUncompressedPublicKey(elliptic.P256(), b)
+func decodePublicKey(b []byte) (types.PublicKey, error) {
+	key, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), b)
+
+	if err != nil {
+		return types.PublicKey{}, err
+	}
+
+	return types.PublicKey{PublicKey: key}, nil
 }

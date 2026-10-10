@@ -1,10 +1,10 @@
 package inmemory
 
 import (
-	"crypto/ecdsa"
 	"errors"
 
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
+	"github.com/baltikaa9/zxcoin/core/domain/types"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
@@ -23,11 +23,11 @@ func (r *Repository) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
 	return u, exists, nil
 }
 
-func (r *Repository) FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
+func (r *Repository) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	utxos := make([]utxo.UTXO, 0, len(r.db))
 
 	for _, u := range r.db {
-		if u.Output.Owner.Equal(owner) {
+		if u.Output.Owner.Equal(owner.PublicKey) {
 			utxos = append(utxos, u)
 		}
 	}
@@ -74,7 +74,7 @@ func (t *transaction) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
 	return u, exists, nil
 }
 
-func (t *transaction) FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error) {
+func (t *transaction) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	if t.closed {
 		return []utxo.UTXO{}, errTransactionClosed
 	}

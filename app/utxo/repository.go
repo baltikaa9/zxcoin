@@ -1,14 +1,13 @@
 package utxo
 
 import (
-	"crypto/ecdsa"
-
+	"github.com/baltikaa9/zxcoin/core/domain/types"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
 type Repository interface {
 	FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error)
-	FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error)
+	FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error)
 	Save(utxo utxo.UTXO) error
 	Delete(id utxo.UTXOID) error
 
@@ -17,7 +16,7 @@ type Repository interface {
 
 type Transaction interface {
 	FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error)
-	FindByOwner(owner *ecdsa.PublicKey) ([]utxo.UTXO, error)
+	FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error)
 	Save(utxo utxo.UTXO) error
 	Delete(id utxo.UTXOID) error
 

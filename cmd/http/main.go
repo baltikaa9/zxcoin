@@ -2,10 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"github.com/baltikaa9/zxcoin/adapters/http/handlers"
 	"github.com/baltikaa9/zxcoin/adapters/http/middleware"
+	"github.com/baltikaa9/zxcoin/adapters/logger"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/app/transaction"
@@ -13,6 +15,14 @@ import (
 )
 
 func main() {
+	logger, err := logger.NewZapLogger()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer logger.Sync()
+
 	db, err := sql.Open("sqlite", "zxcoin.db")
 
 	if err != nil {
@@ -27,7 +37,7 @@ func main() {
 
 	repo := sqlite.NewRepository(db)
 	validator := transaction.NewValidator(repo)
-	mp := mempool.NewMempool(validator)
+	mp := mempool.NewMempool(validator, logger)
 
 	mux := http.NewServeMux()
 

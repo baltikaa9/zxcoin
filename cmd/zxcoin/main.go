@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 
+	"github.com/baltikaa9/zxcoin/adapters/logger"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
 	appblockchain "github.com/baltikaa9/zxcoin/app/blockchain"
@@ -17,6 +19,14 @@ import (
 )
 
 func main() {
+	logger, err := logger.NewZapLogger()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer logger.Sync()
+
 	db, err := sql.Open("sqlite", "zxcoin.db")
 
 	if err != nil {
@@ -34,10 +44,10 @@ func main() {
 
 	tracker := wallet.NewReservationTracker()
 	validator := transaction.NewValidator(repo)
-	mp := mempool.NewMempool(validator)
+	mp := mempool.NewMempool(validator, logger)
 	bc := blockchain.NewBlockchain(2, 42)
 
-	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp)
+	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp, logger)
 
 	myWalletKey, err := wallet.LoadPrivateKey("wallet.key")
 
@@ -51,8 +61,8 @@ func main() {
 		panic(err)
 	}
 
-	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo)
-	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo)
+	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo, logger)
+	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo, logger)
 
 	pk, _ := myWallet.PublicKey.Bytes()
 

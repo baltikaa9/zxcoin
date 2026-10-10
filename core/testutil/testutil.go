@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
+	"github.com/baltikaa9/zxcoin/core/domain/types"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
@@ -15,7 +16,7 @@ type utxoSaver interface {
 	Save(u utxo.UTXO) error
 }
 
-func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
+func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, types.PublicKey) {
 	t.Helper()
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
@@ -23,10 +24,10 @@ func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 		t.Fatalf("не удалось сгенерировать ключ: %v", err)
 	}
 
-	return privateKey, &privateKey.PublicKey
+	return privateKey, types.PublicKey{PublicKey: &privateKey.PublicKey}
 }
 
-func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey, repo utxoSaver) {
+func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey types.PublicKey, repo utxoSaver) {
 	t.Helper()
 
 	u := utxo.UTXO{

@@ -96,8 +96,8 @@ func (in *TxInput) serialize() []byte {
 	return buf
 }
 
-func (in *TxInput) Verify(publicKey *ecdsa.PublicKey, hash types.Hash) bool {
-	return ecdsa.Verify(publicKey, hash[:], in.Signature.R, in.Signature.S)
+func (in *TxInput) Verify(publicKey types.PublicKey, hash types.Hash) bool {
+	return ecdsa.Verify(publicKey.PublicKey, hash[:], in.Signature.R, in.Signature.S)
 }
 
 func (t Transaction) ValidateOutputs() error {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/baltikaa9/zxcoin/app/utxo"
+	"github.com/baltikaa9/zxcoin/core/domain/types"
 )
 
 type UTXODTO struct {
@@ -45,7 +46,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utxos, err := h.repo.FindByOwner(publicKey)
+	utxos, err := h.repo.FindByOwner(types.PublicKey{PublicKey: publicKey})
 
 	if err != nil {
 		http.Error(w, "не удалось найти UTXO", http.StatusInternalServerError)
@@ -68,4 +69,9 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(UTXOResponseDTO{UTXOs: utxosDTO, Sum: sum}); err != nil {
 		return
 	}
+}
+
+func writeJSON(w http.ResponseWriter, data any, status int) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
 }

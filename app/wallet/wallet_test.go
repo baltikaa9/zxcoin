@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
+	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
@@ -15,9 +16,10 @@ import (
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
+	logger := logger.Nop()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
@@ -32,8 +34,10 @@ func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	logger := logger.Nop()
+
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey, repo)
@@ -48,8 +52,10 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	logger := logger.Nop()
+
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	id := utxo.UTXOID{
 		TxID:     types.Hash{},
@@ -85,8 +91,8 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount, output.Amount)
 	}
 
-	if !output.Owner.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
+	if !output.Owner.Equal(otherWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey.Short(), output.Owner.Short())
 	}
 
 	hash, err := tx.Hash()
@@ -95,7 +101,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
+	if !ecdsa.Verify(myWallet.PublicKey.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
@@ -108,8 +114,10 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	logger := logger.Nop()
+
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	id0 := utxo.UTXOID{
 		TxID:     types.Hash{},
@@ -163,8 +171,8 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount, output.Amount)
 	}
 
-	if !output.Owner.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
+	if !output.Owner.Equal(otherWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey.Short(), output.Owner.Short())
 	}
 
 	hash, err := tx.Hash()
@@ -174,7 +182,7 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	}
 
 	for i, input := range inputs {
-		if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
+		if !ecdsa.Verify(myWallet.PublicKey.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 			t.Fatalf("неверная подпись %v входа транзакции", i)
 		}
 	}
@@ -192,8 +200,10 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	logger := logger.Nop()
+
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	id := utxo.UTXOID{
 		TxID:     types.Hash{},
@@ -235,12 +245,12 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatalf("неверная сумма сдачи транзакции. Ожидалось %v, получено %v", amount-payment, change.Amount)
 	}
 
-	if !output.Owner.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
+	if !output.Owner.Equal(otherWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey.Short(), output.Owner.Short())
 	}
 
-	if !change.Owner.Equal(myWallet.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.Owner)
+	if !change.Owner.Equal(myWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner)
 	}
 
 	hash, err := tx.Hash()
@@ -249,7 +259,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
+	if !ecdsa.Verify(myWallet.PublicKey.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 		t.Fatalf("неверная подпись входа транзакции")
 	}
 
@@ -262,8 +272,10 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	repo := inmemory.NewRepository()
 	tracker := NewReservationTracker()
 
-	myWallet := NewWallet(tracker, repo)
-	otherWallet := NewWallet(tracker, repo)
+	logger := logger.Nop()
+
+	myWallet := NewWallet(tracker, repo, logger)
+	otherWallet := NewWallet(tracker, repo, logger)
 
 	id0 := utxo.UTXOID{
 		TxID:     types.Hash{},
@@ -322,12 +334,12 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 		t.Fatalf("неверная сумма выхода транзакции. Ожидалось %v, получено %v", amount*2-payment*2, change.Amount)
 	}
 
-	if !output.Owner.Equal(otherWallet.PublicKey) {
-		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey, output.Owner)
+	if !output.Owner.Equal(otherWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель транзакции. Ожидалось %v, получено %v", otherWallet.PublicKey.Short(), output.Owner.Short())
 	}
 
-	if !change.Owner.Equal(myWallet.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey, change.Owner)
+	if !change.Owner.Equal(myWallet.PublicKey.PublicKey) {
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner)
 	}
 
 	hash, err := tx.Hash()
@@ -337,7 +349,7 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	}
 
 	for i, input := range inputs {
-		if !ecdsa.Verify(myWallet.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
+		if !ecdsa.Verify(myWallet.PublicKey.PublicKey, hash[:], input.Signature.R, input.Signature.S) {
 			t.Fatalf("неверная подпись %v входа транзакции", i)
 		}
 	}
