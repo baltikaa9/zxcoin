@@ -7,10 +7,13 @@ import (
 	"crypto/rand"
 	"testing"
 
-	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
+
+type utxoSaver interface {
+	Save(u utxo.UTXO) error
+}
 
 func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 	t.Helper()
@@ -23,7 +26,7 @@ func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, *ecdsa.PublicKey) {
 	return privateKey, &privateKey.PublicKey
 }
 
-func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey, repo apputxo.Repository) {
+func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey *ecdsa.PublicKey, repo utxoSaver) {
 	t.Helper()
 
 	u := utxo.UTXO{
