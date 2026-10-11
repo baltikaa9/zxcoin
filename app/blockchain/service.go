@@ -54,9 +54,15 @@ func (bs *BlockchainService) MineAndAddBlock(
 		return block.Block{}, fmt.Errorf("create block: %w", err)
 	}
 
-	bs.logger.Info("mining start", "block_hash", newBlock.Header.Hash().String())
+	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", bs.blockchain.CurrentDifficulty())
+	start := time.Now()
 	newBlock.Mine(bs.blockchain.CurrentDifficulty())
-	bs.logger.Info("mining finish", "block_hash", newBlock.Header.Hash().String())
+	bs.logger.Info(
+		"mining finish",
+		"nonce", newBlock.Header.Nonce,
+		"hash", newBlock.Header.Hash().String(),
+		"took", time.Since(start),
+	)
 
 	if err := bs.AddBlock(newBlock); err != nil {
 		return block.Block{}, fmt.Errorf("add block: %w", err)
@@ -97,7 +103,7 @@ func (bs *BlockchainService) AddBlock(block block.Block) error {
 	}
 
 	bs.blockchain.AppendBlock(block)
-	bs.logger.Info("added block")
+	bs.logger.Info("added block", "hash", block.Header.Hash().String())
 
 	return nil
 }
@@ -110,7 +116,7 @@ func (bs *BlockchainService) newBlock(
 	coinbaseTransaction := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: creator}},
 	}
-	bs.logger.Info("created coinbase transaction", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
+	bs.logger.Debug("created coinbase transaction", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
 
 	newBlock := block.Block{
 		Header: block.BlockHeader{
@@ -127,11 +133,9 @@ func (bs *BlockchainService) newBlock(
 		return block.Block{}, err
 	}
 
-	bs.logger.Info("created block",
-		"hash", newBlock.Header.Hash().String(),
+	bs.logger.Debug("created block",
 		"prev_hash", newBlock.Header.PrevHash.String(),
 		"root_hash", newBlock.Header.RootHash.String(),
-		"nonce", newBlock.Header.Nonce,
 		"timestamp", newBlock.Header.Timestamp,
 	)
 
@@ -172,11 +176,15 @@ func (bs *BlockchainService) applyBlock(block block.Block) error {
 				return err
 			}
 		}
-
-		bs.logger.Info("applyed transaction", "tx_id", hash.String())
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	bs.logger.Debug("block applied", "hash", block.Header.Hash().String())
+
+	return nil
 }
 
 func (bs *BlockchainService) verifyTransactions(block block.Block) error {

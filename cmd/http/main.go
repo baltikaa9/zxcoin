@@ -15,13 +15,13 @@ import (
 )
 
 func main() {
-	logger, err := logger.NewZapLogger()
+	lg, err := logger.NewZapLogger()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer logger.Sync()
+	defer lg.Sync()
 
 	db, err := sql.Open("sqlite", "zxcoin.db")
 
@@ -37,7 +37,7 @@ func main() {
 
 	repo := sqlite.NewRepository(db)
 	validator := transaction.NewValidator(repo)
-	mp := mempool.NewMempool(validator, logger)
+	mp := mempool.NewMempool(validator, lg)
 
 	mux := http.NewServeMux()
 

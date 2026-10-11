@@ -10,6 +10,8 @@ import (
 
 var errTransactionClosed = errors.New("transaction is closed")
 
+var _ apputxo.Repository = (*Repository)(nil)
+
 type Repository struct {
 	db map[utxo.UTXOID]utxo.UTXO
 }

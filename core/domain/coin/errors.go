@@ -12,7 +12,7 @@ type PublicKeySerializeError struct {
 }
 
 func (e PublicKeySerializeError) Error() string {
-	return fmt.Sprintf("ошибка при сериализации публичного ключа %v: %v", e.Key, e.Previous)
+	return fmt.Sprintf("ошибка при сериализации публичного ключа %v: %v", *e.Key.PublicKey, e.Previous)
 }
 
 type NilPublicKeyError struct{}

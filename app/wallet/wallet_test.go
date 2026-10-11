@@ -250,7 +250,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	}
 
 	if !change.Owner.Equal(myWallet.PublicKey.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner)
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner.Short())
 	}
 
 	hash, err := tx.Hash()
@@ -339,7 +339,7 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	}
 
 	if !change.Owner.Equal(myWallet.PublicKey.PublicKey) {
-		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner)
+		t.Fatalf("неверный получатель сдачи. Ожидалось %v, получено %v", myWallet.PublicKey.Short(), change.Owner.Short())
 	}
 
 	hash, err := tx.Hash()

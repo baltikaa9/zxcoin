@@ -19,13 +19,13 @@ import (
 )
 
 func main() {
-	logger, err := logger.NewZapLogger()
+	lg, err := logger.NewZapLogger()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer logger.Sync()
+	defer lg.Sync()
 
 	db, err := sql.Open("sqlite", "zxcoin.db")
 
@@ -44,10 +44,10 @@ func main() {
 
 	tracker := wallet.NewReservationTracker()
 	validator := transaction.NewValidator(repo)
-	mp := mempool.NewMempool(validator, logger)
+	mp := mempool.NewMempool(validator, lg)
 	bc := blockchain.NewBlockchain(2, 42)
 
-	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp, logger)
+	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp, lg)
 
 	myWalletKey, err := wallet.LoadPrivateKey("wallet.key")
 
@@ -61,8 +61,8 @@ func main() {
 		panic(err)
 	}
 
-	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo, logger)
-	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo, logger)
+	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo, lg)
+	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo, lg)
 
 	pk, _ := myWallet.PublicKey.Bytes()
 

@@ -57,9 +57,11 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mempool := Mempool{transactions: map[types.Hash]transaction.Transaction{hash: tx}}
-	mempool.Remove(hash)
-	_, ok := mempool.transactions[hash]
+	mp := NewMempool(nil, logger.Nop())
+	mp.transactions[hash] = tx
+
+	mp.Remove(hash)
+	_, ok := mp.transactions[hash]
 
 	if ok {
 		t.Fatalf("транзакция не удалилась")
@@ -92,8 +94,10 @@ func TestGetPending_LessThanLimit(t *testing.T) {
 		tx1Hash: tx1,
 		tx2Hash: tx2,
 	}
-	mempool := Mempool{transactions: txMap}
-	txs := mempool.GetPending(3)
+	mp := NewMempool(nil, logger.Nop())
+	mp.transactions = txMap
+
+	txs := mp.GetPending(3)
 
 	if len(txs) != len(txMap) {
 		t.Fatalf("неверное количество транзакций: ожидалось %v, вернулось %v", len(txMap), len(txs))
@@ -122,12 +126,15 @@ func TestGetPending_MoreThanLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mempool := Mempool{transactions: map[types.Hash]transaction.Transaction{
+	txMap := map[types.Hash]transaction.Transaction{
 		tx1Hash: tx1,
 		tx2Hash: tx2,
-	}}
+	}
+	mp := NewMempool(nil, logger.Nop())
+	mp.transactions = txMap
+
 	limit := uint64(1)
-	txs := mempool.GetPending(limit)
+	txs := mp.GetPending(limit)
 
 	if len(txs) != int(limit) {
 		t.Fatalf("неверное количество транзакций: ожидалось %v, вернулось %v", limit, len(txs))

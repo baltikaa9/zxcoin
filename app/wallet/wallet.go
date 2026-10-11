@@ -77,7 +77,11 @@ func (w Wallet) CreateTransaction(to types.PublicKey, amount uint64) (transactio
 		return transaction.Transaction{}, fmt.Errorf("new transaction: %w", err)
 	}
 
-	hash, _ := t.Hash()
+	hash, err := t.Hash()
+
+	if err != nil {
+		return transaction.Transaction{}, fmt.Errorf("hash transaction: %w", err)
+	}
 
 	w.reserveInputs(inputs)
 	w.logger.Info(
@@ -102,13 +106,13 @@ func (w Wallet) selectInputs(amount uint64) ([]transaction.TxInput, uint64, erro
 		return []transaction.TxInput{}, 0, fmt.Errorf("find by owner: %w", err)
 	}
 
-	w.logger.Debug("found by owner", "utxos", utxos)
+	w.logger.Debug("found by owner", "count", len(utxos))
 
 	for _, utxo := range utxos {
 		if reserved := w.reservationTracker.IsReserved(utxo.ID); !reserved {
 			inputs = append(inputs, transaction.TxInput{ID: utxo.ID})
 			total += utxo.Output.Amount
-			w.logger.Info("selected utxo", "tx_id", utxo.ID.TxID.String(), "out_index", utxo.ID.OutIndex)
+			w.logger.Debug("selected utxo", "tx_id", utxo.ID.TxID.String(), "out_index", utxo.ID.OutIndex)
 
 			if total >= amount {
 				break
@@ -128,19 +132,19 @@ func (w Wallet) reserveInputs(inputs []transaction.TxInput) {
 
 	for _, input := range inputs {
 		w.reservationTracker.Reserve(input.ID)
-		w.logger.Info("reserved utxo", "tx_id", input.ID.TxID.String(), "out_index", input.ID.OutIndex)
+		w.logger.Debug("reserved utxo", "tx_id", input.ID.TxID.String(), "out_index", input.ID.OutIndex)
 	}
 }
 
 func (w Wallet) createOutputs(to types.PublicKey, amount uint64, total uint64) []coin.TxOutput {
 	w.logger.Debug("creating outputs", "amount", amount, "owner", to.Short())
 	outputs := []coin.TxOutput{{Amount: amount, Owner: to}}
-	w.logger.Info("created output", "amount", amount, "owner", to.Short())
+	w.logger.Debug("created output", "amount", amount, "owner", to.Short())
 	change := total - amount
 
 	if change > 0 {
 		outputs = append(outputs, coin.TxOutput{Amount: change, Owner: w.PublicKey})
-		w.logger.Info("created change", "amount", change, "owner", w.PublicKey.Short())
+		w.logger.Debug("created change", "amount", change, "owner", w.PublicKey.Short())
 	}
 
 	return outputs

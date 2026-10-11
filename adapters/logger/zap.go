@@ -1,4 +1,3 @@
-// adapters/logger/zap.go
 package logger
 
 import (
@@ -6,6 +5,8 @@ import (
 
 	"github.com/baltikaa9/zxcoin/app/logger"
 )
+
+var _ logger.Logger = (*ZapLogger)(nil)
 
 type ZapLogger struct {
 	log *zap.SugaredLogger

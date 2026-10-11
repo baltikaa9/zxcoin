@@ -12,6 +12,8 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
+var _ apputxo.Repository = (*Repository)(nil)
+
 type Repository struct {
 	db *sql.DB
 }

@@ -10,6 +10,15 @@ type PublicKey struct {
 }
 
 func (k PublicKey) Short() string {
-	b, _ := k.Bytes()
+	if k.PublicKey == nil {
+		return "nil"
+	}
+
+	b, err := k.Bytes()
+
+	if err != nil || len(b) < 5 {
+		return "invalid"
+	}
+
 	return hex.EncodeToString(b[1:5])
 }

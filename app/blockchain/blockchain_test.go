@@ -71,7 +71,7 @@ func assertUTXO(t *testing.T, repo apputxo.Repository, id utxo.UTXOID, expectedA
 		t.Fatalf("неверная сумма UTXO. Ожидалось %v, получено %v", expectedAmount, u.Output.Amount)
 	}
 
-	if !u.Output.Owner.Equal(expectedOwner) {
+	if !u.Output.Owner.Equal(expectedOwner.PublicKey) {
 		t.Fatalf("неверный владелец UTXO")
 	}
 }
@@ -303,7 +303,7 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 
 	output := tx.Outputs[0]
 
-	if !output.Owner.Equal(publicKey) {
+	if !output.Owner.Equal(publicKey.PublicKey) {
 		t.Fatalf("неверный получатель coinbase-транзакции")
 	}
 
