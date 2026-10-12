@@ -6,10 +6,10 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
-type UTXONotFoundError struct {
-	ID utxo.UTXOID
+type NotFoundError struct {
+	ID utxo.ID
 }
 
-func (e UTXONotFoundError) Error() string {
+func (e NotFoundError) Error() string {
 	return fmt.Sprintf("UTXO %v:%v не найден", e.ID.TxID, e.ID.OutIndex)
 }

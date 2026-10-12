@@ -6,15 +6,15 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
-type TransactionValidator struct {
+type Validator struct {
 	repo apputxo.Repository
 }
 
-func NewValidator(utxoRepo apputxo.Repository) *TransactionValidator {
-	return &TransactionValidator{repo: utxoRepo}
+func NewValidator(utxoRepo apputxo.Repository) *Validator {
+	return &Validator{repo: utxoRepo}
 }
 
-func (v TransactionValidator) Validate(tx transaction.Transaction) error {
+func (v Validator) Validate(tx transaction.Transaction) error {
 	spent, err := v.loadInputs(tx)
 
 	if err != nil {
@@ -32,7 +32,7 @@ func (v TransactionValidator) Validate(tx transaction.Transaction) error {
 	return tx.ValidateSum(spent)
 }
 
-func (v TransactionValidator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
+func (v Validator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
 	spent := make([]utxo.UTXO, 0, len(tx.Inputs))
 
 	for _, input := range tx.Inputs {

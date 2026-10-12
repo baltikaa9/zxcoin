@@ -13,14 +13,14 @@ var errTransactionClosed = errors.New("transaction is closed")
 var _ apputxo.Repository = (*Repository)(nil)
 
 type Repository struct {
-	db map[utxo.UTXOID]utxo.UTXO
+	db map[utxo.ID]utxo.UTXO
 }
 
 func NewRepository() *Repository {
-	return &Repository{db: make(map[utxo.UTXOID]utxo.UTXO)}
+	return &Repository{db: make(map[utxo.ID]utxo.UTXO)}
 }
 
-func (r *Repository) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
+func (r *Repository) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	u, exists := r.db[id]
 	return u, exists, nil
 }
@@ -42,13 +42,13 @@ func (r *Repository) Save(u utxo.UTXO) error {
 	return nil
 }
 
-func (r *Repository) Delete(id utxo.UTXOID) error {
+func (r *Repository) Delete(id utxo.ID) error {
 	delete(r.db, id)
 	return nil
 }
 
 func (r *Repository) Begin() (apputxo.Transaction, error) {
-	newMap := make(map[utxo.UTXOID]utxo.UTXO, len(r.db))
+	newMap := make(map[utxo.ID]utxo.UTXO, len(r.db))
 
 	for k, v := range r.db {
 		newMap[k] = v
@@ -63,11 +63,11 @@ func (r *Repository) Begin() (apputxo.Transaction, error) {
 
 type transaction struct {
 	repository *Repository
-	db         map[utxo.UTXOID]utxo.UTXO
+	db         map[utxo.ID]utxo.UTXO
 	closed     bool
 }
 
-func (t *transaction) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
+func (t *transaction) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	if t.closed {
 		return utxo.UTXO{}, false, errTransactionClosed
 	}
@@ -101,7 +101,7 @@ func (t *transaction) Save(u utxo.UTXO) error {
 	return nil
 }
 
-func (t *transaction) Delete(id utxo.UTXOID) error {
+func (t *transaction) Delete(id utxo.ID) error {
 	if t.closed {
 		return errTransactionClosed
 	}

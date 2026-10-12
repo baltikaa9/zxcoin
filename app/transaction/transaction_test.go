@@ -14,10 +14,10 @@ import (
 func TestValidate_UTXONotFound(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := TransactionValidator{repo}
+	validator := Validator{repo}
 
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: 5, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -26,7 +26,9 @@ func TestValidate_UTXONotFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx.Inputs[0].Sign(privateKey, hash)
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
 
 	err = validator.Validate(tx)
 
@@ -39,12 +41,12 @@ func TestValidate_InvalidSignature(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	attackerPrivateKey, _ := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := TransactionValidator{repo}
+	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -53,7 +55,9 @@ func TestValidate_InvalidSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx.Inputs[0].Sign(attackerPrivateKey, hash)
+	if err := tx.Inputs[0].Sign(attackerPrivateKey, hash); err != nil {
+		t.Fatal(err)
+	}
 
 	err = validator.Validate(tx)
 
@@ -65,12 +69,12 @@ func TestValidate_InvalidSignature(t *testing.T) {
 func TestValidate_InsufficientFunds(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := TransactionValidator{repo}
+	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount * 2, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -79,7 +83,9 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx.Inputs[0].Sign(privateKey, hash)
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
 
 	err = validator.Validate(tx)
 
@@ -91,12 +97,12 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := TransactionValidator{repo}
+	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: 0, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -105,7 +111,9 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx.Inputs[0].Sign(privateKey, hash)
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
 
 	err = validator.Validate(tx)
 
@@ -117,12 +125,12 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 func TestValidate_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	repo := inmemory.NewRepository()
-	validator := TransactionValidator{repo}
+	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
 
 	tx := transaction.Transaction{
-		Inputs:  []transaction.TxInput{{ID: utxo.UTXOID{}}},
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
 	}
 	hash, err := tx.Hash()
@@ -131,7 +139,9 @@ func TestValidate_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx.Inputs[0].Sign(privateKey, hash)
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
 
 	err = validator.Validate(tx)
 

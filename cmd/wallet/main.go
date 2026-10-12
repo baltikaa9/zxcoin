@@ -15,9 +15,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer lg.Sync()
+	defer func() { _ = lg.Sync() }()
 
 	w := wallet.NewWallet(wallet.NewReservationTracker(), inmemory.NewRepository(), lg)
 
-	wallet.SavePrivateKey("other.key", w.PrivateKey)
+	if err := wallet.SavePrivateKey("other.key", w.PrivateKey); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -31,7 +31,7 @@ func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey types.PublicKey, 
 	t.Helper()
 
 	u := utxo.UTXO{
-		ID: utxo.UTXOID{},
+		ID: utxo.ID{},
 		Output: coin.TxOutput{
 			Amount: amount,
 			Owner:  publicKey,

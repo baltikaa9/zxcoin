@@ -10,7 +10,7 @@ import (
 func TestMine(t *testing.T) {
 	difficulty := uint64(2)
 	b := Block{
-		Header:       BlockHeader{PrevHash: types.Hash{}, RootHash: types.Hash{}, Timestamp: 0},
+		Header:       Header{PrevHash: types.Hash{}, RootHash: types.Hash{}, Timestamp: 0},
 		Transactions: []transaction.Transaction{},
 	}
 	b.Mine(difficulty)

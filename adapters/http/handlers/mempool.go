@@ -150,7 +150,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 		}
 
 		inputs = append(inputs, transaction.TxInput{
-			ID: utxo.UTXOID{
+			ID: utxo.ID{
 				TxID:     types.Hash(txIDBytes),
 				OutIndex: input.OutIndex,
 			},

@@ -1,0 +1,15 @@
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - revive # стиль, в том числе else после return
+    - errorlint # ошибки %w, errors.Is/As вместо ==
+  exclusions: 
+    presets:
+      - comments
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt

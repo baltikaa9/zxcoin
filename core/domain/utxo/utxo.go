@@ -6,12 +6,12 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/types"
 )
 
-type UTXOID struct {
+type ID struct {
 	TxID     types.Hash
 	OutIndex uint64
 }
 
 type UTXO struct {
-	ID     UTXOID
+	ID     ID
 	Output coin.TxOutput
 }

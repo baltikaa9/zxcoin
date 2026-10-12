@@ -57,7 +57,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 	myWallet := NewWallet(tracker, repo, logger)
 	otherWallet := NewWallet(tracker, repo, logger)
 
-	id := utxo.UTXOID{
+	id := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
@@ -72,12 +72,12 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 	inputs := tx.Inputs
 	outputs := tx.Outputs
 
-	if len := len(inputs); len != 1 {
-		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", len)
+	if n := len(inputs); n != 1 {
+		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", n)
 	}
 
-	if len := len(outputs); len != 1 {
-		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", len)
+	if n := len(outputs); n != 1 {
+		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", n)
 	}
 
 	input := inputs[0]
@@ -119,11 +119,11 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	myWallet := NewWallet(tracker, repo, logger)
 	otherWallet := NewWallet(tracker, repo, logger)
 
-	id0 := utxo.UTXOID{
+	id0 := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
-	id1 := utxo.UTXOID{
+	id1 := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 1,
 	}
@@ -147,16 +147,16 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	inputs := tx.Inputs
 	outputs := tx.Outputs
 
-	if len := len(inputs); len != 2 {
-		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", len)
+	if n := len(inputs); n != 2 {
+		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", n)
 	}
 
-	if len := len(outputs); len != 1 {
-		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", len)
+	if n := len(outputs); n != 1 {
+		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", n)
 	}
 
 	output := outputs[0]
-	keysExist := map[utxo.UTXOID]bool{}
+	keysExist := map[utxo.ID]bool{}
 
 	for _, input := range inputs {
 		keysExist[input.ID] = true
@@ -205,7 +205,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	myWallet := NewWallet(tracker, repo, logger)
 	otherWallet := NewWallet(tracker, repo, logger)
 
-	id := utxo.UTXOID{
+	id := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
@@ -221,12 +221,12 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 	inputs := tx.Inputs
 	outputs := tx.Outputs
 
-	if len := len(inputs); len != 1 {
-		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", len)
+	if n := len(inputs); n != 1 {
+		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", n)
 	}
 
-	if len := len(outputs); len != 2 {
-		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", len)
+	if n := len(outputs); n != 2 {
+		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", n)
 	}
 
 	input := inputs[0]
@@ -277,11 +277,11 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	myWallet := NewWallet(tracker, repo, logger)
 	otherWallet := NewWallet(tracker, repo, logger)
 
-	id0 := utxo.UTXOID{
+	id0 := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 0,
 	}
-	id1 := utxo.UTXOID{
+	id1 := utxo.ID{
 		TxID:     types.Hash{},
 		OutIndex: 1,
 	}
@@ -306,17 +306,17 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	inputs := tx.Inputs
 	outputs := tx.Outputs
 
-	if len := len(inputs); len != 2 {
-		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", len)
+	if n := len(inputs); n != 2 {
+		t.Fatalf("неверное количество входов. Ожидалось 2, получено %v", n)
 	}
 
-	if len := len(outputs); len != 2 {
-		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", len)
+	if n := len(outputs); n != 2 {
+		t.Fatalf("неверное количество входов. Ожидалось 1, получено %v", n)
 	}
 
 	output := outputs[0]
 	change := outputs[1]
-	keysExist := map[utxo.UTXOID]bool{}
+	keysExist := map[utxo.ID]bool{}
 
 	for _, input := range inputs {
 		keysExist[input.ID] = true

@@ -21,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer lg.Sync()
+	defer func() { _ = lg.Sync() }()
 
 	db, err := sql.Open("sqlite", "zxcoin.db")
 

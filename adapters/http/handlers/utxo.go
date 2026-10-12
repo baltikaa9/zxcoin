@@ -71,7 +71,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeJSON(w http.ResponseWriter, data any, status int) {
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
+// func writeJSON(w http.ResponseWriter, data any, status int) {
+// w.WriteHeader(status)
+// json.NewEncoder(w).Encode(data)
+// }

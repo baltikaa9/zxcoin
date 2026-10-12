@@ -27,8 +27,6 @@ func NewZapLogger(path string) (*ZapLogger, error) {
 		return nil, err
 	}
 
-	zap.NewDevelopment()
-
 	consoleCfg := zap.NewDevelopmentEncoderConfig()
 	consoleCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	consoleCfg.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05.000")

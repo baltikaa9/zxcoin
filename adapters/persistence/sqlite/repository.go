@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
@@ -22,7 +23,7 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
+func (r *Repository) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	return findByID(r.db, id)
 }
 
@@ -34,7 +35,7 @@ func (r *Repository) Save(u utxo.UTXO) error {
 	return save(r.db, u)
 }
 
-func (r *Repository) Delete(id utxo.UTXOID) error {
+func (r *Repository) Delete(id utxo.ID) error {
 	return deleteByID(r.db, id)
 }
 
@@ -54,7 +55,7 @@ type transaction struct {
 	db *sql.Tx
 }
 
-func (t *transaction) FindByID(id utxo.UTXOID) (utxo.UTXO, bool, error) {
+func (t *transaction) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	return findByID(t.db, id)
 }
 
@@ -66,7 +67,7 @@ func (t *transaction) Save(u utxo.UTXO) error {
 	return save(t.db, u)
 }
 
-func (t *transaction) Delete(id utxo.UTXOID) error {
+func (t *transaction) Delete(id utxo.ID) error {
 	return deleteByID(t.db, id)
 }
 
@@ -84,7 +85,7 @@ type execer interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-func findByID(e execer, id utxo.UTXOID) (utxo.UTXO, bool, error) {
+func findByID(e execer, id utxo.ID) (utxo.UTXO, bool, error) {
 	var amount uint64
 	var ownerBytes []byte
 
@@ -93,7 +94,7 @@ func findByID(e execer, id utxo.UTXOID) (utxo.UTXO, bool, error) {
 		id.TxID[:], id.OutIndex,
 	).Scan(&amount, &ownerBytes)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return utxo.UTXO{}, false, nil
 	}
 
@@ -150,7 +151,7 @@ func findByOwner(e execer, owner types.PublicKey) ([]utxo.UTXO, error) {
 		}
 
 		result = append(result, utxo.UTXO{
-			ID:     utxo.UTXOID{TxID: types.Hash(txID), OutIndex: outIndex},
+			ID:     utxo.ID{TxID: types.Hash(txID), OutIndex: outIndex},
 			Output: coin.TxOutput{Amount: amount, Owner: owner},
 		})
 	}
@@ -180,7 +181,7 @@ func save(e execer, u utxo.UTXO) error {
 	return err
 }
 
-func deleteByID(e execer, id utxo.UTXOID) error {
+func deleteByID(e execer, id utxo.ID) error {
 	_, err := e.Exec(
 		`DELETE FROM utxos WHERE tx_id = ? AND out_index = ?`,
 		id.TxID[:], id.OutIndex,

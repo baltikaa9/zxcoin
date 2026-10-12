@@ -15,7 +15,7 @@ import (
 )
 
 type TxInput struct {
-	ID        utxo.UTXOID
+	ID        utxo.ID
 	Signature Signature
 }
 
@@ -61,7 +61,9 @@ func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa
 	}
 
 	for i := range t.Inputs {
-		t.Inputs[i].Sign(privateKey, hash)
+		if err := t.Inputs[i].Sign(privateKey, hash); err != nil {
+			return Transaction{}, fmt.Errorf("input sign: %w", err)
+		}
 	}
 
 	return t, nil

@@ -17,22 +17,22 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
-type BlockchainService struct {
+type Service struct {
 	blockchain *blockchain.Blockchain
 	utxoRepo   utxoapp.Repository
-	validator  *apptransaction.TransactionValidator
+	validator  *apptransaction.Validator
 	mempool    *mempool.Mempool
 	logger     logger.Logger
 }
 
-func NewBlockchainService(
+func NewService(
 	blockchain *blockchain.Blockchain,
 	utxoRepo utxoapp.Repository,
-	validator *apptransaction.TransactionValidator,
+	validator *apptransaction.Validator,
 	mempool *mempool.Mempool,
 	logger logger.Logger,
-) *BlockchainService {
-	return &BlockchainService{
+) *Service {
+	return &Service{
 		blockchain: blockchain,
 		utxoRepo:   utxoRepo,
 		validator:  validator,
@@ -41,7 +41,7 @@ func NewBlockchainService(
 	}
 }
 
-func (bs *BlockchainService) MineAndAddBlock(
+func (bs *Service) MineAndAddBlock(
 	transactionLimit uint64,
 	creator types.PublicKey,
 ) (block.Block, error) {
@@ -81,7 +81,7 @@ func (bs *BlockchainService) MineAndAddBlock(
 	return newBlock, nil
 }
 
-func (bs *BlockchainService) AddBlock(block block.Block) error {
+func (bs *Service) AddBlock(block block.Block) error {
 	if err := block.ValidateProofOfWork(bs.blockchain.CurrentDifficulty()); err != nil {
 		return fmt.Errorf("validate PoW: %w", err)
 	}
@@ -108,7 +108,7 @@ func (bs *BlockchainService) AddBlock(block block.Block) error {
 	return nil
 }
 
-func (bs *BlockchainService) newBlock(
+func (bs *Service) newBlock(
 	transactions []transaction.Transaction,
 	creator types.PublicKey,
 ) (block.Block, error) {
@@ -119,7 +119,7 @@ func (bs *BlockchainService) newBlock(
 	bs.logger.Debug("coinbase transaction created", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
 
 	newBlock := block.Block{
-		Header: block.BlockHeader{
+		Header: block.Header{
 			PrevHash:  bs.blockchain.LastHash(),
 			Nonce:     0,
 			Timestamp: uint32(time.Now().Unix()),
@@ -142,7 +142,7 @@ func (bs *BlockchainService) newBlock(
 	return newBlock, nil
 }
 
-func (bs *BlockchainService) applyBlock(block block.Block) error {
+func (bs *Service) applyBlock(block block.Block) error {
 	bs.logger.Debug("applying block", "hash", block.Header.Hash().String())
 	tx, err := bs.utxoRepo.Begin()
 
@@ -150,7 +150,7 @@ func (bs *BlockchainService) applyBlock(block block.Block) error {
 		return err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	for _, transaction := range block.Transactions {
 		hash, err := transaction.Hash()
@@ -167,7 +167,7 @@ func (bs *BlockchainService) applyBlock(block block.Block) error {
 
 		for i, output := range transaction.Outputs {
 			if err := tx.Save(utxo.UTXO{
-				ID: utxo.UTXOID{TxID: hash, OutIndex: uint64(i)},
+				ID: utxo.ID{TxID: hash, OutIndex: uint64(i)},
 				Output: coin.TxOutput{
 					Amount: output.Amount,
 					Owner:  output.Owner,
@@ -187,8 +187,8 @@ func (bs *BlockchainService) applyBlock(block block.Block) error {
 	return nil
 }
 
-func (bs *BlockchainService) verifyTransactions(block block.Block) error {
-	spentInThisBlock := make(map[utxo.UTXOID]struct{})
+func (bs *Service) verifyTransactions(block block.Block) error {
+	spentInThisBlock := make(map[utxo.ID]struct{})
 	foundCoinbase := false
 
 	for _, transaction := range block.Transactions {

@@ -9,7 +9,7 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/types"
 )
 
-type BlockHeader struct {
+type Header struct {
 	PrevHash  types.Hash
 	Nonce     uint64
 	RootHash  types.Hash
@@ -17,11 +17,11 @@ type BlockHeader struct {
 }
 
 type Block struct {
-	Header       BlockHeader
+	Header       Header
 	Transactions []transaction.Transaction
 }
 
-func (bh BlockHeader) serialize() []byte {
+func (bh Header) serialize() []byte {
 	buf := bh.PrevHash[:]
 	buf = append(buf, bh.RootHash[:]...)
 	buf = binary.BigEndian.AppendUint64(buf, bh.Nonce)
@@ -30,7 +30,7 @@ func (bh BlockHeader) serialize() []byte {
 	return buf
 }
 
-func (bh BlockHeader) Hash() types.Hash {
+func (bh Header) Hash() types.Hash {
 	return sha256.Sum256(bh.serialize())
 }
 

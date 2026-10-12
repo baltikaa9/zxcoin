@@ -10,11 +10,11 @@ import (
 
 type Mempool struct {
 	transactions map[types.Hash]transaction.Transaction
-	validator    *apptransaction.TransactionValidator
+	validator    *apptransaction.Validator
 	logger       logger.Logger
 }
 
-func NewMempool(validator *apptransaction.TransactionValidator, logger logger.Logger) *Mempool {
+func NewMempool(validator *apptransaction.Validator, logger logger.Logger) *Mempool {
 	return &Mempool{
 		transactions: make(map[types.Hash]transaction.Transaction),
 		validator:    validator,

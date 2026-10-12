@@ -1,3 +1,4 @@
+// Package logger предоставляет интерфейс логирования
 package logger
 
 type Logger interface {

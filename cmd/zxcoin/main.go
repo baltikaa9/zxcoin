@@ -46,14 +46,14 @@ func run(lg applogger.Logger) error {
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator, lg)
 	bc := blockchain.NewBlockchain(4, 42)
-	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp, lg)
+	bs := appblockchain.NewService(bc, repo, validator, mp, lg)
 
 	myWallet := wallet.NewWallet(tracker, repo, lg)
 	otherWallet := wallet.NewWallet(tracker, repo, lg)
 
 	for i, amount := range []uint64{5, 3, 11, 10} {
 		u := utxo.UTXO{
-			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
+			ID:     utxo.ID{TxID: types.Hash{}, OutIndex: uint64(i)},
 			Output: coin.TxOutput{Amount: amount, Owner: myWallet.PublicKey},
 		}
 
