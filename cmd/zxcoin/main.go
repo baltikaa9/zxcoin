@@ -1,146 +1,108 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/baltikaa9/zxcoin/adapters/logger"
+	adapterlogger "github.com/baltikaa9/zxcoin/adapters/logger"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
-	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
 	appblockchain "github.com/baltikaa9/zxcoin/app/blockchain"
+	applogger "github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/app/transaction"
+	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/app/wallet"
 	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
-
-	_ "modernc.org/sqlite"
+	"github.com/baltikaa9/zxcoin/core/domain/coin"
+	"github.com/baltikaa9/zxcoin/core/domain/types"
+	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
 func main() {
-	lg, err := logger.NewZapLogger()
+	lg, err := adapterlogger.NewZapLogger("logs/zxcoin.json")
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer lg.Sync()
-
-	db, err := sql.Open("sqlite", "zxcoin.db")
+	err = run(lg)
 
 	if err != nil {
-		panic(err)
+		lg.Error("demo failed", "err", err)
 	}
 
-	defer db.Close()
+	_ = lg.Sync()
 
-	if err := db.Ping(); err != nil {
-		panic(err)
+	if err != nil {
+		os.Exit(1)
 	}
+}
 
-	_ = inmemory.NewRepository()
-	repo := sqlite.NewRepository(db)
-
+func run(lg applogger.Logger) error {
+	lg.Info("started")
+	repo := inmemory.NewRepository()
 	tracker := wallet.NewReservationTracker()
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator, lg)
-	bc := blockchain.NewBlockchain(2, 42)
-
+	bc := blockchain.NewBlockchain(4, 42)
 	bs := appblockchain.NewBlockchainService(bc, repo, validator, mp, lg)
 
-	myWalletKey, err := wallet.LoadPrivateKey("wallet.key")
+	myWallet := wallet.NewWallet(tracker, repo, lg)
+	otherWallet := wallet.NewWallet(tracker, repo, lg)
 
-	if err != nil {
-		panic(err)
+	for i, amount := range []uint64{5, 3, 11, 10} {
+		u := utxo.UTXO{
+			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
+			Output: coin.TxOutput{Amount: amount, Owner: myWallet.PublicKey},
+		}
+
+		if err := repo.Save(u); err != nil {
+			return fmt.Errorf("save utxo: %w", err)
+		}
 	}
 
-	otherWalletKey, err := wallet.LoadPrivateKey("other.key")
+	fmt.Println("было")
 
-	if err != nil {
-		panic(err)
+	if err := printBalances(repo, myWallet, otherWallet); err != nil {
+		return err
 	}
-
-	myWallet := wallet.LoadWallet(myWalletKey, tracker, repo, lg)
-	otherWallet := wallet.LoadWallet(otherWalletKey, tracker, repo, lg)
-
-	pk, _ := myWallet.PublicKey.Bytes()
-
-	fmt.Println("key:", hex.EncodeToString(pk))
-
-	// fmt.Printf("myWallet: %v, otherWallet: %v\n\n", myWallet, otherWallet)
-
-	// coins := []coin.TxOutput{
-	// {Amount: 5, Owner: myWallet.PublicKey},
-	// {Amount: 3, Owner: myWallet.PublicKey},
-	// {Amount: 11, Owner: myWallet.PublicKey},
-	// {Amount: 10, Owner: myWallet.PublicKey},
-	// }
-
-	// utxos := make([]utxo.UTXO, 0, len(coins))
-
-	// 	for i, c := range coins {
-	// 		utxos = append(utxos, utxo.UTXO{
-	// 			ID:     utxo.UTXOID{TxID: types.Hash{}, OutIndex: uint64(i)},
-	// 			Output: c,
-	// 		})
-	// 	}
-	//
-	// 	for _, u := range utxos {
-	// 		err := repo.Save(u)
-	//
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 	}
 
 	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
 
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("create transaction: %w", err)
 	}
-
-	for _, i := range t1.Inputs {
-		fmt.Printf("txID: %v\noutIndex: %v\nsignature: %v\n\n", i.ID.TxID, i.ID.OutIndex, hex.EncodeToString(i.Signature.Marshal()))
-	}
-
-	for _, o := range t1.Outputs {
-		ownerBytes, err := o.Owner.Bytes()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("amount: %v\nowner: %v\n\n", o.Amount, hex.EncodeToString(ownerBytes))
-	}
-
-	// for _, i := range t1.Inputs {
-	// fmt.Println(t1.Hash())
-	// fmt.Println(string(i.Signature.R.Bytes()))
-	// fmt.Println(string(i.Signature.S.Bytes()))
-	// }
-
-	// t2, err := myWallet.CreateTransaction(otherWallet.PublicKey, 0)
-
-	// if err != nil {
-	// panic(err)
-	// }
-
-	my, _ := repo.FindByOwner(myWallet.PublicKey)
-	other, _ := repo.FindByOwner(otherWallet.PublicKey)
-	fmt.Printf("было\nMy: %v\nOther: %v\n\n", my, other)
 
 	if err := mp.Add(t1); err != nil {
-		panic(err)
+		return fmt.Errorf("add to mempool: %w", err)
 	}
 
-	// if err := mp.Add(t2); err != nil {
-	// panic(err)
-	// }
-
-	if _, err := bs.MineAndAddBlock(0, myWallet.PublicKey); err != nil {
-		panic(err)
+	if _, err := bs.MineAndAddBlock(10, myWallet.PublicKey); err != nil {
+		return fmt.Errorf("mine block: %w", err)
 	}
 
-	my, _ = repo.FindByOwner(myWallet.PublicKey)
-	other, _ = repo.FindByOwner(otherWallet.PublicKey)
-	fmt.Printf("стало\nMy: %v\nOther: %v\n\n", my, other)
+	fmt.Println("стало")
+
+	return printBalances(repo, myWallet, otherWallet)
+}
+
+func printBalances(repo apputxo.Repository, my, other wallet.Wallet) error {
+	for name, w := range map[string]wallet.Wallet{"my": my, "other": other} {
+		utxos, err := repo.FindByOwner(w.PublicKey)
+
+		if err != nil {
+			return fmt.Errorf("find utxo of %s: %w", name, err)
+		}
+
+		var sum uint64
+
+		for _, u := range utxos {
+			sum += u.Output.Amount
+		}
+
+		fmt.Printf("  %s (%s): %d UTXO, баланс %d\n", name, w.PublicKey.Short(), len(utxos), sum)
+	}
+
+	return nil
 }

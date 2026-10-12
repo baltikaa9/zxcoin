@@ -103,7 +103,7 @@ func (bs *BlockchainService) AddBlock(block block.Block) error {
 	}
 
 	bs.blockchain.AppendBlock(block)
-	bs.logger.Info("added block", "hash", block.Header.Hash().String())
+	bs.logger.Info("block added", "hash", block.Header.Hash().String())
 
 	return nil
 }
@@ -116,7 +116,7 @@ func (bs *BlockchainService) newBlock(
 	coinbaseTransaction := transaction.Transaction{
 		Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: creator}},
 	}
-	bs.logger.Debug("created coinbase transaction", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
+	bs.logger.Debug("coinbase transaction created", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
 
 	newBlock := block.Block{
 		Header: block.BlockHeader{
@@ -133,7 +133,7 @@ func (bs *BlockchainService) newBlock(
 		return block.Block{}, err
 	}
 
-	bs.logger.Debug("created block",
+	bs.logger.Debug("block created",
 		"prev_hash", newBlock.Header.PrevHash.String(),
 		"root_hash", newBlock.Header.RootHash.String(),
 		"timestamp", newBlock.Header.Timestamp,

@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	lg, err := logger.NewZapLogger()
+	lg, err := logger.NewZapLogger("logs/http.json")
 
 	if err != nil {
 		log.Fatal(err)

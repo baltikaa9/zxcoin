@@ -112,7 +112,7 @@ func (w Wallet) selectInputs(amount uint64) ([]transaction.TxInput, uint64, erro
 		if reserved := w.reservationTracker.IsReserved(utxo.ID); !reserved {
 			inputs = append(inputs, transaction.TxInput{ID: utxo.ID})
 			total += utxo.Output.Amount
-			w.logger.Debug("selected utxo", "tx_id", utxo.ID.TxID.String(), "out_index", utxo.ID.OutIndex)
+			w.logger.Debug("utxo selected", "tx_id", utxo.ID.TxID.String(), "out_index", utxo.ID.OutIndex)
 
 			if total >= amount {
 				break
@@ -132,19 +132,19 @@ func (w Wallet) reserveInputs(inputs []transaction.TxInput) {
 
 	for _, input := range inputs {
 		w.reservationTracker.Reserve(input.ID)
-		w.logger.Debug("reserved utxo", "tx_id", input.ID.TxID.String(), "out_index", input.ID.OutIndex)
+		w.logger.Debug("utxo reserved", "tx_id", input.ID.TxID.String(), "out_index", input.ID.OutIndex)
 	}
 }
 
 func (w Wallet) createOutputs(to types.PublicKey, amount uint64, total uint64) []coin.TxOutput {
 	w.logger.Debug("creating outputs", "amount", amount, "owner", to.Short())
 	outputs := []coin.TxOutput{{Amount: amount, Owner: to}}
-	w.logger.Debug("created output", "amount", amount, "owner", to.Short())
+	w.logger.Debug("output created", "amount", amount, "owner", to.Short())
 	change := total - amount
 
 	if change > 0 {
 		outputs = append(outputs, coin.TxOutput{Amount: change, Owner: w.PublicKey})
-		w.logger.Debug("created change", "amount", change, "owner", w.PublicKey.Short())
+		w.logger.Debug("change created", "amount", change, "owner", w.PublicKey.Short())
 	}
 
 	return outputs

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	lg, err := logger.NewZapLogger()
+	lg, err := logger.NewZapLogger("logs/wallet.json")
 
 	if err != nil {
 		log.Fatal(err)

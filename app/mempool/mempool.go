@@ -32,7 +32,7 @@ func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 		}
 
 		result = append(result, tx)
-		m.logger.Debug("selected transaction", "tx_id", hash.String())
+		m.logger.Debug("transaction selected", "tx_id", hash.String())
 	}
 
 	return result
@@ -51,7 +51,7 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 
 	m.logger.Debug("adding transaction", "tx_id", hash.String())
 	m.transactions[hash] = transaction
-	m.logger.Info("added transaction", "tx_id", hash.String())
+	m.logger.Info("transaction added", "tx_id", hash.String())
 
 	return nil
 }
