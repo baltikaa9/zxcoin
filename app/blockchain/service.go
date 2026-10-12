@@ -61,7 +61,7 @@ func (bs *Service) MineAndAddBlock(
 		"mining finish",
 		"nonce", newBlock.Header.Nonce,
 		"hash", newBlock.Header.Hash().String(),
-		"took", time.Since(start),
+		"duration", time.Since(start),
 	)
 
 	if err := bs.AddBlock(newBlock); err != nil {
