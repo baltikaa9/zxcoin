@@ -111,7 +111,7 @@ type MempoolHandler struct {
 }
 
 func NewMempoolHandler(mempool *mempool.Mempool, logger logger.Logger) *MempoolHandler {
-	return &MempoolHandler{mempool: mempool, logger: logger.Named("mempool handler")}
+	return &MempoolHandler{mempool: mempool, logger: logger.Named("http.mempool")}
 }
 
 func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {

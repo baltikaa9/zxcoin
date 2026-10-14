@@ -30,7 +30,7 @@ type UTXOHandler struct {
 }
 
 func NewUTXOHandler(repo utxo.Repository, logger logger.Logger) *UTXOHandler {
-	return &UTXOHandler{repo: repo, logger: logger.Named("utxo handler")}
+	return &UTXOHandler{repo: repo, logger: logger.Named("http.utxo")}
 }
 
 func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
