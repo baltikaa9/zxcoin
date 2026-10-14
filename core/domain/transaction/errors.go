@@ -40,3 +40,12 @@ type EmptyOutputsError struct {
 func (e EmptyOutputsError) Error() string {
 	return fmt.Sprintf("отсутствуют выходы транзакции %v", e.TxID)
 }
+
+type DuplicateInputError struct {
+	TxID     types.Hash
+	OutIndex uint64
+}
+
+func (e DuplicateInputError) Error() string {
+	return fmt.Sprintf("UTXO (%v, %v) уже используется в данной транзакции", e.TxID, e.OutIndex)
+}

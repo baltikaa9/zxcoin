@@ -164,5 +164,5 @@ func TestValidate_DuplicateInputs(t *testing.T) {
 
 	err = validator.Validate(tx)
 
-	testutil.CheckError[DuplicateInputError](t, err)
+	testutil.CheckError[transaction.DuplicateInputError](t, err)
 }

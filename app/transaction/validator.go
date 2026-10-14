@@ -21,6 +21,10 @@ func (v Validator) Validate(tx transaction.Transaction) error {
 		return err
 	}
 
+	if err := tx.ValidateDuplicatesInputs(); err != nil {
+		return err
+	}
+
 	if err := tx.ValidateOutputs(); err != nil {
 		return err
 	}
@@ -34,13 +38,8 @@ func (v Validator) Validate(tx transaction.Transaction) error {
 
 func (v Validator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
 	utxos := make([]utxo.UTXO, 0, len(tx.Inputs))
-	spent := make(map[utxo.ID]struct{})
 
 	for _, input := range tx.Inputs {
-		if _, ok := spent[input.ID]; ok {
-			return nil, DuplicateInputError{TxID: input.ID.TxID, OutIndex: input.ID.OutIndex}
-		}
-
 		u, exists, err := v.repo.FindByID(input.ID)
 
 		if err != nil {
@@ -52,7 +51,6 @@ func (v Validator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
 		}
 
 		utxos = append(utxos, u)
-		spent[u.ID] = struct{}{}
 	}
 
 	return utxos, nil

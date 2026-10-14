@@ -159,6 +159,20 @@ func (t Transaction) ValidateSum(spent []utxo.UTXO) error {
 	return nil
 }
 
+func (t Transaction) ValidateDuplicatesInputs() error {
+	spent := make(map[utxo.ID]struct{})
+
+	for _, input := range t.Inputs {
+		if _, ok := spent[input.ID]; ok {
+			return DuplicateInputError{TxID: input.ID.TxID, OutIndex: input.ID.OutIndex}
+		}
+
+		spent[input.ID] = struct{}{}
+	}
+
+	return nil
+}
+
 func (t Transaction) serialize() ([]byte, error) {
 	buf := binary.BigEndian.AppendUint32(nil, uint32(len(t.Inputs)))
 
