@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
@@ -25,9 +24,7 @@ func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
 	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2)
 
-	if _, ok := errors.AsType[InsufficientFundsError](err); !ok {
-		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
-	}
+	testutil.CheckError[InsufficientFundsError](t, err)
 }
 
 func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
@@ -43,9 +40,7 @@ func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 	testutil.GenerateSingleUtxo(t, amount, otherWallet.PublicKey, repo)
 	_, err := myWallet.CreateTransaction(otherWallet.PublicKey, 1)
 
-	if _, ok := errors.AsType[InsufficientFundsError](err); !ok {
-		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
-	}
+	testutil.CheckError[InsufficientFundsError](t, err)
 }
 
 func TestCreateTransaction_SuccessSingleInput(t *testing.T) {

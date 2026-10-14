@@ -48,6 +48,39 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestAdd_DoubleSpent(t *testing.T) {
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
+	validator := apptransaction.NewValidator(repo)
+	logger := logger.Nop()
+	mempool := NewMempool(validator, logger)
+	amount := uint64(5)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
+	tx := transaction.Transaction{
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
+	}
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
+
+	err = mempool.Add(tx)
+
+	if err != nil {
+		t.Fatalf("ошибка при добавлении транзакции: %v", err)
+	}
+
+	err = mempool.Add(tx)
+
+	testutil.CheckError[DoubleSpendError](t, err)
+}
+
 func TestRemove(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{

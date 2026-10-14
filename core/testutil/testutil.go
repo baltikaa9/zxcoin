@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -41,4 +42,20 @@ func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey types.PublicKey, 
 	if err := repo.Save(u); err != nil {
 		t.Fatalf("не удалось сохранить UTXO: %v", err)
 	}
+}
+
+func CheckError[E error](t *testing.T, err error) {
+	t.Helper()
+
+	if _, ok := errors.AsType[E](err); ok {
+		return
+	}
+
+	actual := err
+
+	for errors.Unwrap(actual) != nil {
+		actual = errors.Unwrap(actual)
+	}
+
+	t.Fatalf("ожидался тип ошибки %T, получен %T: %v", *new(E), actual, err)
 }

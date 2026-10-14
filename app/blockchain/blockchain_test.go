@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
@@ -120,52 +119,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	block.Mine(bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
-	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
-		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
-	}
-}
-
-func TestAddBlock_DoubleSpendInTransaction(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
-
-	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	amount := uint64(5)
-	testutil.GenerateSingleUtxo(t, amount, publicKey, bs.utxoRepo)
-
-	tx := transaction.Transaction{
-		Inputs: []transaction.TxInput{
-			{ID: utxo.ID{}},
-			{ID: utxo.ID{}},
-		},
-		Outputs: []coin.TxOutput{
-			{Amount: amount, Owner: publicKey},
-		},
-	}
-
-	hash, err := tx.Hash()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i := range tx.Inputs {
-		if err := tx.Inputs[i].Sign(privateKey, hash); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	block, err := bs.newBlock([]transaction.Transaction{tx}, publicKey)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	block.Mine(bs.blockchain.CurrentDifficulty())
-	err = bs.AddBlock(block)
-
-	if _, ok := errors.AsType[DoubleSpendError](err); !ok {
-		t.Fatalf("ожидалась DoubleSpendError, получено: %v", err)
-	}
+	testutil.CheckError[DoubleSpendError](t, err)
 }
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
@@ -202,9 +156,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 	err = bs.AddBlock(b)
 
-	if _, ok := errors.AsType[block.InvalidNonceError](err); !ok {
-		t.Fatalf("ожидалась InvalidNonceError, получено: %v", err)
-	}
+	testutil.CheckError[block.InvalidNonceError](t, err)
 }
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
@@ -228,9 +180,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	block.Mine(bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
-	if _, ok := errors.AsType[blockchain.InvalidPrevHashError](err); !ok {
-		t.Fatalf("ожидалась InvalidPrevHashError, получено: %v", err)
-	}
+	testutil.CheckError[blockchain.InvalidPrevHashError](t, err)
 }
 
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
@@ -248,9 +198,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	b.Mine(bs.blockchain.CurrentDifficulty())
 	err := bs.AddBlock(b)
 
-	if _, ok := errors.AsType[block.InvalidMerkleRootError](err); !ok {
-		t.Fatalf("ожидалась InvalidMerkleRootError, получено: %v", err)
-	}
+	testutil.CheckError[block.InvalidMerkleRootError](t, err)
 }
 
 func TestAddBlock_MoreOneCoinbase(t *testing.T) {
@@ -278,9 +226,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	block.Mine(bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
-	if _, ok := errors.AsType[MoreOneCoinbaseError](err); !ok {
-		t.Fatalf("ожидалась MoreOneCoinbaseError, получено: %v", err)
-	}
+	testutil.CheckError[MoreOneCoinbaseError](t, err)
 }
 
 func TestNewBlock_CoinbaseExisted(t *testing.T) {

@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
@@ -32,9 +31,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 
 	err = validator.Validate(tx)
 
-	if _, ok := errors.AsType[UTXONotFoundError](err); !ok {
-		t.Fatalf("ожидалась UTXONotFoundError, получено: %v", err)
-	}
+	testutil.CheckError[UTXONotFoundError](t, err)
 }
 
 func TestValidate_InvalidSignature(t *testing.T) {
@@ -61,9 +58,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 	err = validator.Validate(tx)
 
-	if _, ok := errors.AsType[transaction.InvalidSignatureError](err); !ok {
-		t.Fatalf("ожидалась InvalidSignatureError, получено: %v", err)
-	}
+	testutil.CheckError[transaction.InvalidSignatureError](t, err)
 }
 
 func TestValidate_InsufficientFunds(t *testing.T) {
@@ -89,9 +84,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 	err = validator.Validate(tx)
 
-	if _, ok := errors.AsType[transaction.InsufficientFundsError](err); !ok {
-		t.Fatalf("ожидалась InsufficientFundsError, получено: %v", err)
-	}
+	testutil.CheckError[transaction.InsufficientFundsError](t, err)
 }
 
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
@@ -117,9 +110,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 	err = validator.Validate(tx)
 
-	if _, ok := errors.AsType[transaction.ZeroOutputError](err); !ok {
-		t.Fatalf("ожидалась ZeroOutputError, получено: %v", err)
-	}
+	testutil.CheckError[transaction.ZeroOutputError](t, err)
 }
 
 func TestValidate_Success(t *testing.T) {
@@ -148,4 +139,30 @@ func TestValidate_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ошибка при валидации: %v", err)
 	}
+}
+
+func TestValidate_DuplicateInputs(t *testing.T) {
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	repo := inmemory.NewRepository()
+	validator := Validator{repo}
+	amount := uint64(5)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
+
+	tx := transaction.Transaction{
+		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}, {ID: utxo.ID{}}},
+		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
+	}
+	hash, err := tx.Hash()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+		t.Fatal(err)
+	}
+
+	err = validator.Validate(tx)
+
+	testutil.CheckError[DuplicateInputError](t, err)
 }
