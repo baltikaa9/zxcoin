@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
@@ -88,8 +89,8 @@ func validateHexField(field string, value string, expectedBytes int) error {
 
 	decoded, err := hex.DecodeString(value)
 
-	if err == nil {
-		return fmt.Errorf("%s must be valid hex", field)
+	if err != nil {
+		return fmt.Errorf("%s must be valid hex: %w", field, err)
 	}
 
 	if len(decoded) != expectedBytes {
@@ -106,14 +107,11 @@ func validateHexField(field string, value string, expectedBytes int) error {
 
 type MempoolHandler struct {
 	mempool *mempool.Mempool
+	logger  logger.Logger
 }
 
-func NewMempoolHandler(
-	mempool *mempool.Mempool,
-) *MempoolHandler {
-	return &MempoolHandler{
-		mempool: mempool,
-	}
+func NewMempoolHandler(mempool *mempool.Mempool, logger logger.Logger) *MempoolHandler {
+	return &MempoolHandler{mempool: mempool, logger: logger.Named("mempool handler")}
 }
 
 func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
@@ -124,15 +122,13 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 
 	if err := decoder.Decode(&data); err != nil {
 		http.Error(w, fmt.Sprintf("parse error: %v", err), http.StatusBadRequest)
+		h.logger.Warn("decode transaction", "err", err)
 		return
 	}
 
 	if err := data.Validate(); err != nil {
-		http.Error(
-			w,
-			fmt.Sprintf("validation error: %v", err),
-			http.StatusBadRequest,
-		)
+		http.Error(w, fmt.Sprintf("validation error: %v", err), http.StatusBadRequest)
+		h.logger.Warn("validate transaction", "err", err)
 		return
 	}
 
@@ -146,6 +142,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 
 		if err != nil {
 			http.Error(w, fmt.Sprintf("parse signature error: %v", err), http.StatusBadRequest)
+			h.logger.Warn("parse signature", "err", err)
 			return
 		}
 
@@ -159,11 +156,19 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for _, output := range data.Outputs {
-		publicKeyBytes, _ := hex.DecodeString(output.PublicKey)
+		publicKeyBytes, err := hex.DecodeString(output.PublicKey)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
+			h.logger.Warn("decode output pubkey", "err", err)
+			return
+		}
+
 		publicKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), publicKeyBytes)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("не удалось спарсить публичный ключ: %v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
+			h.logger.Warn("parse output pubkey", "err", err)
 			return
 		}
 
@@ -177,24 +182,22 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.mempool.Add(tx); err != nil {
 		http.Error(w, fmt.Sprintf("не удалось добавить транзакцию в пул: %v", err), http.StatusUnprocessableEntity)
+		h.logger.Warn("add transaction", "err", err)
 		return
 	}
 
 	response, err := transactionToDto(tx)
 
 	if err != nil {
-		http.Error(
-			w,
-			fmt.Sprintf("не удалось подготовить ответ: %v", err),
-			http.StatusInternalServerError,
-		)
+		http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
+		h.logger.Error("transaction to dto", "err", err)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return
+		h.logger.Error("encode response dto", "err", err)
 	}
 }
 

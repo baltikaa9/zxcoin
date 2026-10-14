@@ -42,8 +42,8 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handlers.Health)
-	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp).AddTransaction)
-	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXOHandler(repo).GetUTXOByOwner)
+	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp, lg).AddTransaction)
+	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXOHandler(repo, lg).GetUTXOByOwner)
 	// mux.HandleFunc("POST /mine", nil)
 
 	if err := http.ListenAndServe(":8080", middleware.Logging(lg.Named("http"))(middleware.JSON(mux))); err != nil {
