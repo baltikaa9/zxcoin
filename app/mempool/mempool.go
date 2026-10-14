@@ -6,10 +6,12 @@ import (
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
+	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
 type Mempool struct {
 	transactions map[types.Hash]transaction.Transaction
+	inputs       map[utxo.ID]struct{}
 	validator    *apptransaction.Validator
 	logger       logger.Logger
 }
@@ -17,6 +19,7 @@ type Mempool struct {
 func NewMempool(validator *apptransaction.Validator, logger logger.Logger) *Mempool {
 	return &Mempool{
 		transactions: make(map[types.Hash]transaction.Transaction),
+		inputs:       make(map[utxo.ID]struct{}),
 		validator:    validator,
 		logger:       logger.Named("mempool"),
 	}
@@ -39,6 +42,12 @@ func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 }
 
 func (m *Mempool) Add(transaction transaction.Transaction) error {
+	for _, input := range transaction.Inputs {
+		if _, ok := m.inputs[input.ID]; ok {
+			return DoubleSpendError{TxID: input.ID.TxID, OutIndex: input.ID.OutIndex}
+		}
+	}
+
 	if err := m.validator.Validate(transaction); err != nil {
 		return err
 	}
@@ -51,12 +60,27 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 
 	m.logger.Debug("adding transaction", "tx_id", hash.String())
 	m.transactions[hash] = transaction
+
+	for _, input := range transaction.Inputs {
+		m.inputs[input.ID] = struct{}{}
+	}
+
 	m.logger.Info("transaction added", "tx_id", hash.String())
 
 	return nil
 }
 
 func (m *Mempool) Remove(hash types.Hash) {
+	tx, ok := m.transactions[hash]
+
+	if !ok {
+		return
+	}
+
+	for _, input := range tx.Inputs {
+		delete(m.inputs, input.ID)
+	}
+
 	delete(m.transactions, hash)
 	m.logger.Debug("removed transaction", "tx_id", hash.String())
 }

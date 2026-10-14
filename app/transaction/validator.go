@@ -33,9 +33,14 @@ func (v Validator) Validate(tx transaction.Transaction) error {
 }
 
 func (v Validator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
-	spent := make([]utxo.UTXO, 0, len(tx.Inputs))
+	utxos := make([]utxo.UTXO, 0, len(tx.Inputs))
+	spent := make(map[utxo.ID]struct{})
 
 	for _, input := range tx.Inputs {
+		if _, ok := spent[input.ID]; ok {
+			return nil, DuplicateInputError{TxID: input.ID.TxID, OutIndex: input.ID.OutIndex}
+		}
+
 		u, exists, err := v.repo.FindByID(input.ID)
 
 		if err != nil {
@@ -46,8 +51,9 @@ func (v Validator) loadInputs(tx transaction.Transaction) ([]utxo.UTXO, error) {
 			return nil, UTXONotFoundError{input.ID.TxID, input.ID.OutIndex}
 		}
 
-		spent = append(spent, u)
+		utxos = append(utxos, u)
+		spent[u.ID] = struct{}{}
 	}
 
-	return spent, nil
+	return utxos, nil
 }
