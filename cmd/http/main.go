@@ -46,7 +46,13 @@ func main() {
 	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXOHandler(repo, lg).GetUTXOByOwner)
 	// mux.HandleFunc("POST /mine", nil)
 
-	if err := http.ListenAndServe(":8080", middleware.Logging(lg.Named("http"))(middleware.JSON(mux))); err != nil {
+	handler := middleware.Logging(lg.Named("http"))(
+		middleware.Recovery(lg.Named("http"))(
+			middleware.JSON(mux),
+		),
+	)
+
+	if err := http.ListenAndServe(":8080", handler); err != nil {
 		panic(err)
 	}
 }
