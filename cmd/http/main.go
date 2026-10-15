@@ -9,8 +9,10 @@ import (
 	"github.com/baltikaa9/zxcoin/adapters/http/middleware"
 	"github.com/baltikaa9/zxcoin/adapters/logger"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
+	appblockchain "github.com/baltikaa9/zxcoin/app/blockchain"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/app/transaction"
+	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
 	_ "modernc.org/sqlite"
 )
 
@@ -38,13 +40,15 @@ func main() {
 	repo := sqlite.NewRepository(db)
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator, lg)
+	bc := blockchain.NewBlockchain(2, 42)
+	bs := appblockchain.NewService(bc, repo, validator, mp, lg)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handlers.Health)
-	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp, lg).AddTransaction)
-	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXOHandler(repo, lg).GetUTXOByOwner)
-	mux.HandleFunc("POST /mine", func(http.ResponseWriter, *http.Request) { panic("test") })
+	mux.HandleFunc("POST /transactions", handlers.NewMempool(mp, lg).AddTransaction)
+	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXO(repo, lg).GetUTXOByOwner)
+	mux.HandleFunc("POST /mine", handlers.NewMining(bs, lg).Mine)
 
 	handler := middleware.Logging(lg.Named("http"))(
 		middleware.Recovery(lg.Named("http"))(

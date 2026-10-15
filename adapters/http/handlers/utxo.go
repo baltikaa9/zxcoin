@@ -8,33 +8,23 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/baltikaa9/zxcoin/adapters/http/handlers/dto"
 	"github.com/baltikaa9/zxcoin/adapters/http/handlers/utils"
 	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
 )
 
-type UTXODTO struct {
-	TxID     string `json:"txID"`
-	OutIndex uint64 `json:"outIndex"`
-	Amount   uint64 `json:"amount"`
-}
-
-type UTXOResponseDTO struct {
-	UTXOs []UTXODTO `json:"utxos"`
-	Sum   uint64    `json:"sum"`
-}
-
-type UTXOHandler struct {
+type UTXO struct {
 	repo   utxo.Repository
 	logger logger.Logger
 }
 
-func NewUTXOHandler(repo utxo.Repository, logger logger.Logger) *UTXOHandler {
-	return &UTXOHandler{repo: repo, logger: logger.Named("http.utxo")}
+func NewUTXO(repo utxo.Repository, logger logger.Logger) *UTXO {
+	return &UTXO{repo: repo, logger: logger.Named("http.utxo")}
 }
 
-func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
+func (h *UTXO) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	publicKeyBytes, err := hex.DecodeString(r.PathValue("owner"))
 
 	if err != nil {
@@ -59,20 +49,20 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utxosDTO := make([]UTXODTO, 0, len(utxos))
+	utxosDTO := make([]dto.UTXO, 0, len(utxos))
 	var sum uint64
 
 	for _, u := range utxos {
 		sum += u.Output.Amount
 
-		utxosDTO = append(utxosDTO, UTXODTO{
+		utxosDTO = append(utxosDTO, dto.UTXO{
 			TxID:     u.ID.TxID.String(),
 			OutIndex: u.ID.OutIndex,
 			Amount:   u.Output.Amount,
 		})
 	}
 
-	if err := json.NewEncoder(w).Encode(UTXOResponseDTO{UTXOs: utxosDTO, Sum: sum}); err != nil {
+	if err := json.NewEncoder(w).Encode(dto.UTXOResponse{UTXOs: utxosDTO, Sum: sum}); err != nil {
 		h.logger.Error("encode response dto", "err", err)
 	}
 }

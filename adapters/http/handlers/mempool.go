@@ -5,11 +5,10 @@ import (
 	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/baltikaa9/zxcoin/adapters/http/handlers/dto"
 	"github.com/baltikaa9/zxcoin/adapters/http/handlers/utils"
 	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
@@ -19,104 +18,17 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
-type InputDto struct {
-	TxID      string `json:"txID"`
-	OutIndex  uint64 `json:"outIndex"`
-	Signature string `json:"signature"`
-}
-
-type OutputDto struct {
-	Amount    uint64 `json:"amount"`
-	PublicKey string `json:"publicKey"`
-}
-
-type TransactionDto struct {
-	Inputs  []InputDto  `json:"inputs"`
-	Outputs []OutputDto `json:"outputs"`
-}
-
-func (d TransactionDto) Validate() error {
-	if len(d.Inputs) == 0 {
-		return errors.New("не заполнено поле inputs")
-	}
-
-	if len(d.Outputs) == 0 {
-		return errors.New("не заполнено поле outputs")
-	}
-
-	for i, input := range d.Inputs {
-		if err := validateHexField(
-			fmt.Sprintf("inputs[%d].txID", i),
-			input.TxID,
-			32,
-		); err != nil {
-			return err
-		}
-
-		if err := validateHexField(
-			fmt.Sprintf("inputs[%d].signature", i),
-			input.Signature,
-			64,
-		); err != nil {
-			return err
-		}
-	}
-
-	for i, output := range d.Outputs {
-		if output.Amount == 0 {
-			return fmt.Errorf("outputs[%d].amount must be greater than zero", i)
-		}
-
-		if err := validateHexField(
-			fmt.Sprintf("outputs[%d].publicKey", i),
-			output.PublicKey,
-			65,
-		); err != nil {
-			return err
-		}
-
-		if output.PublicKey[:2] != "04" {
-			return fmt.Errorf("outputs[%d].publicKey must be uncompressed", i)
-		}
-	}
-
-	return nil
-}
-
-func validateHexField(field string, value string, expectedBytes int) error {
-	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("%s is required", field)
-	}
-
-	decoded, err := hex.DecodeString(value)
-
-	if err != nil {
-		return fmt.Errorf("%s must be valid hex: %w", field, err)
-	}
-
-	if len(decoded) != expectedBytes {
-		return fmt.Errorf(
-			"%s must contain %d bytes, got %d",
-			field,
-			expectedBytes,
-			len(decoded),
-		)
-	}
-
-	return nil
-}
-
-type MempoolHandler struct {
+type Mempool struct {
 	mempool *mempool.Mempool
 	logger  logger.Logger
 }
 
-func NewMempoolHandler(mempool *mempool.Mempool, logger logger.Logger) *MempoolHandler {
-	return &MempoolHandler{mempool: mempool, logger: logger.Named("http.mempool")}
+func NewMempool(mempool *mempool.Mempool, logger logger.Logger) *Mempool {
+	return &Mempool{mempool: mempool, logger: logger.Named("http.mempool")}
 }
 
-func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) {
-	var data TransactionDto
+func (h *Mempool) AddTransaction(w http.ResponseWriter, r *http.Request) {
+	var data dto.Transaction
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -187,7 +99,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response, err := transactionToDto(tx)
+	response, err := dto.TransactionToDto(tx)
 
 	if err != nil {
 		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
@@ -200,35 +112,4 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		h.logger.Error("encode response dto", "err", err)
 	}
-}
-
-func transactionToDto(
-	tx transaction.Transaction,
-) (TransactionDto, error) {
-	dto := TransactionDto{
-		Inputs:  make([]InputDto, 0, len(tx.Inputs)),
-		Outputs: make([]OutputDto, 0, len(tx.Outputs)),
-	}
-
-	for _, input := range tx.Inputs {
-		dto.Inputs = append(dto.Inputs, InputDto{
-			TxID:      input.ID.TxID.String(),
-			OutIndex:  input.ID.OutIndex,
-			Signature: hex.EncodeToString(input.Signature.Marshal()),
-		})
-	}
-
-	for _, output := range tx.Outputs {
-		publicKey, err := output.Owner.Bytes()
-		if err != nil {
-			return TransactionDto{}, err
-		}
-
-		dto.Outputs = append(dto.Outputs, OutputDto{
-			Amount:    output.Amount,
-			PublicKey: hex.EncodeToString(publicKey),
-		})
-	}
-
-	return dto, nil
 }

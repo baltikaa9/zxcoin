@@ -2,6 +2,7 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -47,6 +48,10 @@ func (bs *Service) MineAndAddBlock(
 ) (block.Block, error) {
 	bs.logger.Debug("mine and add block start")
 	txs := bs.mempool.GetPending(transactionLimit)
+
+	if len(txs) == 0 {
+		return block.Block{}, errors.New("ожидающих транзакций не найдено")
+	}
 
 	newBlock, err := bs.newBlock(txs, creator)
 
