@@ -44,7 +44,7 @@ func main() {
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /transactions", handlers.NewMempoolHandler(mp, lg).AddTransaction)
 	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXOHandler(repo, lg).GetUTXOByOwner)
-	// mux.HandleFunc("POST /mine", nil)
+	mux.HandleFunc("POST /mine", func(http.ResponseWriter, *http.Request) { panic("test") })
 
 	handler := middleware.Logging(lg.Named("http"))(
 		middleware.Recovery(lg.Named("http"))(

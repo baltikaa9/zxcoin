@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"runtime/debug"
 
+	"github.com/baltikaa9/zxcoin/adapters/http/handlers/utils"
 	"github.com/baltikaa9/zxcoin/app/logger"
 )
 
@@ -17,7 +19,7 @@ func Recovery(log logger.Logger) func(next http.Handler) http.Handler {
 					return
 				}
 
-				if rec == http.ErrAbortHandler {
+				if err, ok := rec.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 					panic(rec)
 				}
 
@@ -27,7 +29,7 @@ func Recovery(log logger.Logger) func(next http.Handler) http.Handler {
 					"stack", string(debug.Stack()),
 				)
 
-				http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
+				utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 			}()
 
 			next.ServeHTTP(w, r)

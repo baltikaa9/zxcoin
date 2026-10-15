@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/baltikaa9/zxcoin/adapters/http/handlers/utils"
 	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -121,13 +122,13 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&data); err != nil {
-		http.Error(w, fmt.Sprintf("parse error: %v", err), http.StatusBadRequest)
+		utils.JSONError(w, fmt.Sprintf("parse error: %v", err), http.StatusBadRequest)
 		h.logger.Warn("decode transaction", "err", err)
 		return
 	}
 
 	if err := data.Validate(); err != nil {
-		http.Error(w, fmt.Sprintf("validation error: %v", err), http.StatusBadRequest)
+		utils.JSONError(w, fmt.Sprintf("validation error: %v", err), http.StatusBadRequest)
 		h.logger.Warn("validate transaction", "err", err)
 		return
 	}
@@ -141,7 +142,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 		signature, err := transaction.ParseSignature(signatureBytes)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("parse signature error: %v", err), http.StatusBadRequest)
+			utils.JSONError(w, fmt.Sprintf("parse signature error: %v", err), http.StatusBadRequest)
 			h.logger.Warn("parse signature", "err", err)
 			return
 		}
@@ -159,7 +160,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 		publicKeyBytes, err := hex.DecodeString(output.PublicKey)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
+			utils.JSONError(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
 			h.logger.Warn("decode output pubkey", "err", err)
 			return
 		}
@@ -167,7 +168,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 		publicKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), publicKeyBytes)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
+			utils.JSONError(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
 			h.logger.Warn("parse output pubkey", "err", err)
 			return
 		}
@@ -181,7 +182,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	tx := transaction.Transaction{Inputs: inputs, Outputs: outputs}
 
 	if err := h.mempool.Add(tx); err != nil {
-		http.Error(w, fmt.Sprintf("не удалось добавить транзакцию в пул: %v", err), http.StatusUnprocessableEntity)
+		utils.JSONError(w, fmt.Sprintf("не удалось добавить транзакцию в пул: %v", err), http.StatusUnprocessableEntity)
 		h.logger.Warn("add transaction", "err", err)
 		return
 	}
@@ -189,7 +190,7 @@ func (h *MempoolHandler) AddTransaction(w http.ResponseWriter, r *http.Request) 
 	response, err := transactionToDto(tx)
 
 	if err != nil {
-		http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
+		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 		h.logger.Error("transaction to dto", "err", err)
 		return
 	}

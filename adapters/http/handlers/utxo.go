@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/baltikaa9/zxcoin/adapters/http/handlers/utils"
 	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
@@ -37,7 +38,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	publicKeyBytes, err := hex.DecodeString(r.PathValue("owner"))
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
+		utils.JSONError(w, fmt.Sprintf("владелец должен быть в формате hex: %v", err), http.StatusBadRequest)
 		h.logger.Warn("decode owner pubkey", "err", err)
 		return
 	}
@@ -45,7 +46,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	publicKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), publicKeyBytes)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
+		utils.JSONError(w, fmt.Sprintf("некорректный публичный ключ: %v", err), http.StatusBadRequest)
 		h.logger.Warn("parse owner pubkey", "err", err)
 		return
 	}
@@ -53,7 +54,7 @@ func (h *UTXOHandler) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	utxos, err := h.repo.FindByOwner(types.PublicKey{PublicKey: publicKey})
 
 	if err != nil {
-		http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
+		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 		h.logger.Error("find utxo by owner", "err", err)
 		return
 	}
