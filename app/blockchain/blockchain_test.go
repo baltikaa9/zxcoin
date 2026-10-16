@@ -45,7 +45,7 @@ func mineGenesisBlock(t *testing.T, bs *Service) block.Block {
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine(bs.blockchain.CurrentDifficulty())
+	genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
 	if err := bs.AddBlock(genesisBlock); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
@@ -116,7 +116,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(bs.blockchain.CurrentDifficulty())
+	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[DoubleSpendError](t, err)
@@ -177,7 +177,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(bs.blockchain.CurrentDifficulty())
+	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[blockchain.InvalidPrevHashError](t, err)
@@ -195,7 +195,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{},
 	}
-	b.Mine(bs.blockchain.CurrentDifficulty())
+	b.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err := bs.AddBlock(b)
 
 	testutil.CheckError[block.InvalidMerkleRootError](t, err)
@@ -223,7 +223,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(bs.blockchain.CurrentDifficulty())
+	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[MoreOneCoinbaseError](t, err)
@@ -329,7 +329,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(bs.blockchain.CurrentDifficulty())
+	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
 	err = bs.AddBlock(block)
 
@@ -368,7 +368,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine(bs.blockchain.CurrentDifficulty())
+	genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(genesisBlock)
 
 	if err != nil {
@@ -405,7 +405,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
 	}
 
-	_, err = bs.MineAndAddBlock(1, publicKey)
+	_, err = bs.MineAndAddBlock(t.Context(), 1, publicKey)
 
 	if err != nil {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)

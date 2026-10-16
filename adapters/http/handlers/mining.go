@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -58,9 +60,14 @@ func (h *Mining) Mine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := h.blockchain.MineAndAddBlock(data.TransactionLimit, types.PublicKey{PublicKey: publicKey})
+	b, err := h.blockchain.MineAndAddBlock(r.Context(), data.TransactionLimit, types.PublicKey{PublicKey: publicKey})
 
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			h.logger.Debug("mining request cancelled", "err", err)
+			return
+		}
+
 		utils.JSONError(w, fmt.Sprintf("mining error: %v", err), http.StatusBadRequest)
 		h.logger.Warn("mining error", "err", err)
 		return

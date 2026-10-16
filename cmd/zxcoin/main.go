@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -78,7 +79,7 @@ func run(lg applogger.Logger) error {
 		return fmt.Errorf("add to mempool: %w", err)
 	}
 
-	if _, err := bs.MineAndAddBlock(10, myWallet.PublicKey); err != nil {
+	if _, err := bs.MineAndAddBlock(context.Background(), 10, myWallet.PublicKey); err != nil {
 		return fmt.Errorf("mine block: %w", err)
 	}
 

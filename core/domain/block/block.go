@@ -2,6 +2,7 @@
 package block
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 
@@ -34,8 +35,15 @@ func (bh Header) Hash() types.Hash {
 	return sha256.Sum256(bh.serialize())
 }
 
-func (b *Block) Mine(difficulty uint64) {
+func (b *Block) Mine(ctx context.Context, difficulty uint64) bool {
 	for {
+		select {
+		case <-ctx.Done():
+			b.Header.Nonce = 0
+			return false
+		default:
+		}
+
 		hash := b.Header.Hash()
 
 		valid := true
@@ -48,7 +56,7 @@ func (b *Block) Mine(difficulty uint64) {
 		}
 
 		if valid {
-			return
+			return true
 		}
 
 		b.Header.Nonce++

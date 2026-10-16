@@ -2,6 +2,7 @@
 package blockchain
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -45,6 +46,7 @@ func NewService(
 }
 
 func (bs *Service) MineAndAddBlock(
+	ctx context.Context,
 	transactionLimit uint64,
 	creator types.PublicKey,
 ) (block.Block, error) {
@@ -66,7 +68,16 @@ func (bs *Service) MineAndAddBlock(
 
 	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
 	start := time.Now()
-	newBlock.Mine(difficulty)
+	mined := newBlock.Mine(ctx, difficulty)
+
+	if !mined {
+		bs.logger.Warn(
+			"mining cancelled",
+			"duration", time.Since(start),
+		)
+		return block.Block{}, ctx.Err()
+	}
+	
 	bs.logger.Info(
 		"mining finish",
 		"nonce", newBlock.Header.Nonce,
