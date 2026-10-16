@@ -4,6 +4,7 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/baltikaa9/zxcoin/app/logger"
@@ -19,6 +20,7 @@ import (
 )
 
 type Service struct {
+	mu         sync.RWMutex
 	blockchain *blockchain.Blockchain
 	utxoRepo   utxoapp.Repository
 	validator  *apptransaction.Validator
@@ -53,15 +55,18 @@ func (bs *Service) MineAndAddBlock(
 		return block.Block{}, errors.New("ожидающих транзакций не найдено")
 	}
 
+	bs.mu.RLock()
 	newBlock, err := bs.newBlock(txs, creator)
+	difficulty := bs.blockchain.CurrentDifficulty()
+	bs.mu.RUnlock()
 
 	if err != nil {
 		return block.Block{}, fmt.Errorf("create block: %w", err)
 	}
 
-	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", bs.blockchain.CurrentDifficulty())
+	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
 	start := time.Now()
-	newBlock.Mine(bs.blockchain.CurrentDifficulty())
+	newBlock.Mine(difficulty)
 	bs.logger.Info(
 		"mining finish",
 		"nonce", newBlock.Header.Nonce,
@@ -87,6 +92,9 @@ func (bs *Service) MineAndAddBlock(
 }
 
 func (bs *Service) AddBlock(block block.Block) error {
+	bs.mu.Lock()
+	defer bs.mu.Unlock()
+
 	if err := block.ValidateProofOfWork(bs.blockchain.CurrentDifficulty()); err != nil {
 		return fmt.Errorf("validate PoW: %w", err)
 	}

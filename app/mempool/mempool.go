@@ -2,6 +2,8 @@
 package mempool
 
 import (
+	"sync"
+
 	"github.com/baltikaa9/zxcoin/app/logger"
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
@@ -10,6 +12,7 @@ import (
 )
 
 type Mempool struct {
+	mu           sync.RWMutex
 	transactions map[types.Hash]transaction.Transaction
 	inputs       map[utxo.ID]struct{}
 	validator    *apptransaction.Validator
@@ -29,6 +32,9 @@ func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 	m.logger.Debug("getting transactions", "limit", limit)
 	var result []transaction.Transaction
 
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	for hash, tx := range m.transactions {
 		if len(result) >= int(limit) {
 			break
@@ -42,6 +48,9 @@ func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 }
 
 func (m *Mempool) Add(transaction transaction.Transaction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, input := range transaction.Inputs {
 		if _, ok := m.inputs[input.ID]; ok {
 			return DoubleSpendError{TxID: input.ID.TxID, OutIndex: input.ID.OutIndex}
@@ -71,6 +80,9 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 }
 
 func (m *Mempool) Remove(hash types.Hash) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	tx, ok := m.transactions[hash]
 
 	if !ok {
