@@ -66,6 +66,8 @@ func (h *Mining) Mine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
+
 	response := dto.Block{
 		Header: dto.Header{
 			PrevHash:  b.Header.PrevHash.String(),
@@ -76,12 +78,14 @@ func (h *Mining) Mine(w http.ResponseWriter, r *http.Request) {
 		Transactions: make([]dto.Transaction, 0, len(b.Transactions)),
 	}
 
-	for _, tx := range b.Transactions {
+	for i, tx := range b.Transactions {
 		txDto, err := dto.TransactionToDto(tx)
 
 		if err != nil {
-			utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
-			h.logger.Error("transaction to dto", "err", err)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"message": "Блок успешно добавлен, но не удалось сформировать ответ",
+			})
+			h.logger.Error("transaction to dto", "tx_index", i, "err", err)
 			return
 		}
 

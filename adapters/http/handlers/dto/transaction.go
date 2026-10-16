@@ -86,11 +86,11 @@ func TransactionToDto(tx transaction.Transaction) (Transaction, error) {
 		})
 	}
 
-	for _, output := range tx.Outputs {
+	for i, output := range tx.Outputs {
 		publicKey, err := output.Owner.Bytes()
 
 		if err != nil {
-			return Transaction{}, err
+			return Transaction{}, fmt.Errorf("output[%d] public key: %w", i, err)
 		}
 
 		dto.Outputs = append(dto.Outputs, Output{

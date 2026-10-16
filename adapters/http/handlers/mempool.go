@@ -92,13 +92,6 @@ func (h *Mempool) AddTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx := transaction.Transaction{Inputs: inputs, Outputs: outputs}
-
-	if err := h.mempool.Add(tx); err != nil {
-		utils.JSONError(w, fmt.Sprintf("не удалось добавить транзакцию в пул: %v", err), http.StatusUnprocessableEntity)
-		h.logger.Warn("add transaction", "err", err)
-		return
-	}
-
 	response, err := dto.TransactionToDto(tx)
 
 	if err != nil {
@@ -107,10 +100,15 @@ func (h *Mempool) AddTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.mempool.Add(tx); err != nil {
+		utils.JSONError(w, fmt.Sprintf("не удалось добавить транзакцию в пул: %v", err), http.StatusUnprocessableEntity)
+		h.logger.Warn("add transaction", "err", err)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 		h.logger.Error("encode response dto", "err", err)
 	}
 }
