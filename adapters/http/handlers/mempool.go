@@ -110,6 +110,7 @@ func (h *Mempool) AddTransaction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 		h.logger.Error("encode response dto", "err", err)
 	}
 }

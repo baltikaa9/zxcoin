@@ -63,6 +63,7 @@ func (h *UTXO) GetUTXOByOwner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(dto.UTXOResponse{UTXOs: utxosDTO, Sum: sum}); err != nil {
+		utils.JSONError(w, "внутренняя ошибка", http.StatusInternalServerError)
 		h.logger.Error("encode response dto", "err", err)
 	}
 }
