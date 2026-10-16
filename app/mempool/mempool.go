@@ -36,7 +36,7 @@ func (m *Mempool) GetPending(limit uint64) []transaction.Transaction {
 	defer m.mu.RUnlock()
 
 	for hash, tx := range m.transactions {
-		if len(result) >= int(limit) {
+		if uint64(len(result)) >= limit {
 			break
 		}
 
