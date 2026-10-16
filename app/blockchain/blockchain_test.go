@@ -45,7 +45,7 @@ func mineGenesisBlock(t *testing.T, bs *Service) block.Block {
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = genesisBlock.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 
 	if err := bs.AddBlock(genesisBlock); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
@@ -116,7 +116,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[DoubleSpendError](t, err)
@@ -177,7 +177,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[blockchain.InvalidPrevHashError](t, err)
@@ -195,7 +195,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{},
 	}
-	b.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = b.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 	err := bs.AddBlock(b)
 
 	testutil.CheckError[block.InvalidMerkleRootError](t, err)
@@ -223,7 +223,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[MoreOneCoinbaseError](t, err)
@@ -329,7 +329,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 
 	err = bs.AddBlock(block)
 
@@ -368,7 +368,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	_ = genesisBlock.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(genesisBlock)
 
 	if err != nil {

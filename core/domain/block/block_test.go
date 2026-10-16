@@ -13,7 +13,7 @@ func TestMine(t *testing.T) {
 		Header:       Header{PrevHash: types.Hash{}, RootHash: types.Hash{}, Timestamp: 0},
 		Transactions: []transaction.Transaction{},
 	}
-	b.Mine(t.Context(), difficulty)
+	_ = b.Mine(t.Context(), nil, difficulty)
 	hash := b.Header.Hash()
 
 	for i := range difficulty {

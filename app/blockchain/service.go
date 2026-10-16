@@ -22,6 +22,7 @@ import (
 
 type Service struct {
 	mu         sync.RWMutex
+	blockAdded chan struct{}
 	blockchain *blockchain.Blockchain
 	utxoRepo   utxoapp.Repository
 	validator  *apptransaction.Validator
@@ -37,6 +38,7 @@ func NewService(
 	logger logger.Logger,
 ) *Service {
 	return &Service{
+		blockAdded: make(chan struct{}),
 		blockchain: blockchain,
 		utxoRepo:   utxoRepo,
 		validator:  validator,
@@ -68,16 +70,13 @@ func (bs *Service) MineAndAddBlock(
 
 	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
 	start := time.Now()
-	mined := newBlock.Mine(ctx, difficulty)
-
-	if !mined {
-		bs.logger.Warn(
-			"mining cancelled",
-			"duration", time.Since(start),
-		)
-		return block.Block{}, ctx.Err()
+	bs.mu.RLock()
+	blockAdded := bs.blockAdded
+	bs.mu.RUnlock()
+	if err := newBlock.Mine(ctx, blockAdded, difficulty); err != nil {
+		return block.Block{}, err
 	}
-	
+
 	bs.logger.Info(
 		"mining finish",
 		"nonce", newBlock.Header.Nonce,
@@ -127,6 +126,10 @@ func (bs *Service) AddBlock(block block.Block) error {
 	}
 
 	bs.blockchain.AppendBlock(block)
+
+	close(bs.blockAdded)
+	bs.blockAdded = make(chan struct{})
+
 	bs.logger.Info("block added", "hash", block.Header.Hash().String())
 
 	return nil
