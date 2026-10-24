@@ -62,6 +62,7 @@ func (bs *Service) MineAndAddBlock(
 	bs.mu.RLock()
 	newBlock, err := bs.newBlock(txs, creator)
 	difficulty := bs.blockchain.CurrentDifficulty()
+	blockAdded := bs.blockAdded
 	bs.mu.RUnlock()
 
 	if err != nil {
@@ -70,9 +71,7 @@ func (bs *Service) MineAndAddBlock(
 
 	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
 	start := time.Now()
-	bs.mu.RLock()
-	blockAdded := bs.blockAdded
-	bs.mu.RUnlock()
+
 	if err := newBlock.Mine(ctx, blockAdded, difficulty); err != nil {
 		return block.Block{}, err
 	}
