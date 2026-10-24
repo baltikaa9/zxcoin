@@ -1,5 +1,11 @@
 test:
 	go test ./...
 
-build: test
+race:
+	go test -race ./...
+
+all: test
 	go build -o zxcoin.o ./cmd/zxcoin
+
+lint:
+	golangci-lint run --max-issues-per-linter=0 --max-same-issues=0
