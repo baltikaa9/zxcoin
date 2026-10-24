@@ -68,6 +68,12 @@ func (h *Mining) Mine(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if _, ok := errors.AsType[blockchain.TipChangedError](err); ok {
+			utils.JSONError(w, err.Error(), http.StatusConflict)
+			h.logger.Warn("added block while mining", "err", err)
+			return
+		}
+
 		utils.JSONError(w, fmt.Sprintf("mining error: %v", err), http.StatusBadRequest)
 		h.logger.Warn("mining error", "err", err)
 		return

@@ -45,7 +45,7 @@ func mineGenesisBlock(t *testing.T, bs *Service) block.Block {
 		t.Fatal(err)
 	}
 
-	_ = genesisBlock.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
+	_ = genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
 	if err := bs.AddBlock(genesisBlock); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
@@ -116,7 +116,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err = bs.AddBlock(block)
 
 	testutil.CheckError[DoubleSpendError](t, err)
@@ -171,14 +171,13 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{},
 	}
-	err := block.CalculateRootHash()
 
-	if err != nil {
+	if err := block.CalculateRootHash(); err != nil {
 		t.Fatal(err)
 	}
 
-	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
-	err = bs.AddBlock(block)
+	_ = block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	err := bs.AddBlock(block)
 
 	testutil.CheckError[blockchain.InvalidPrevHashError](t, err)
 }
@@ -195,7 +194,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{},
 	}
-	_ = b.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
+	_ = b.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err := bs.AddBlock(b)
 
 	testutil.CheckError[block.InvalidMerkleRootError](t, err)
@@ -217,14 +216,12 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 		},
 	}
 
-	err := block.CalculateRootHash()
-
-	if err != nil {
+	if err := block.CalculateRootHash(); err != nil {
 		t.Fatal(err)
 	}
 
-	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
-	err = bs.AddBlock(block)
+	_ = block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+	err := bs.AddBlock(block)
 
 	testutil.CheckError[MoreOneCoinbaseError](t, err)
 }
@@ -323,17 +320,14 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		},
 		Transactions: []transaction.Transaction{tx},
 	}
-	err := block.CalculateRootHash()
 
-	if err != nil {
+	if err := block.CalculateRootHash(); err != nil {
 		t.Fatal(err)
 	}
 
-	_ = block.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
+	_ = block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
-	err = bs.AddBlock(block)
-
-	if err != nil {
+	if err := bs.AddBlock(block); err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
 
@@ -368,10 +362,9 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_ = genesisBlock.Mine(t.Context(), nil, bs.blockchain.CurrentDifficulty())
-	err = bs.AddBlock(genesisBlock)
+	_ = genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
-	if err != nil {
+	if err := bs.AddBlock(genesisBlock); err != nil {
 		t.Fatalf("ошибка при добавлении первого блока: %v", err)
 	}
 
@@ -399,9 +392,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bs.mempool.Add(tx)
-
-	if err != nil {
+	if err := bs.mempool.Add(tx); err != nil {
 		t.Fatalf("ошибка при добавлении транзакции: %v", err)
 	}
 

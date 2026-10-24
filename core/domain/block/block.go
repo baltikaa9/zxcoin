@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"errors"
 
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
@@ -36,15 +35,12 @@ func (bh Header) Hash() types.Hash {
 	return sha256.Sum256(bh.serialize())
 }
 
-func (b *Block) Mine(ctx context.Context, blockAdded <-chan struct{}, difficulty uint64) error {
+func (b *Block) Mine(ctx context.Context, difficulty uint64) error {
 	for {
 		select {
 		case <-ctx.Done():
 			b.Header.Nonce = 0
-			return ctx.Err()
-		case <-blockAdded:
-			b.Header.Nonce = 0
-			return errors.New("block added while mining")
+			return context.Cause(ctx)
 		default:
 		}
 

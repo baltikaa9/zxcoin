@@ -22,7 +22,8 @@ import (
 
 type Service struct {
 	mu         sync.RWMutex
-	blockAdded chan struct{}
+	tipCtx     context.Context
+	tipCancel  context.CancelCauseFunc
 	blockchain *blockchain.Blockchain
 	utxoRepo   utxoapp.Repository
 	validator  *apptransaction.Validator
@@ -37,8 +38,11 @@ func NewService(
 	mempool *mempool.Mempool,
 	logger logger.Logger,
 ) *Service {
+	ctx, cancel := context.WithCancelCause(context.Background())
+
 	return &Service{
-		blockAdded: make(chan struct{}),
+		tipCtx:     ctx,
+		tipCancel:  cancel,
 		blockchain: blockchain,
 		utxoRepo:   utxoRepo,
 		validator:  validator,
@@ -62,8 +66,16 @@ func (bs *Service) MineAndAddBlock(
 	bs.mu.RLock()
 	newBlock, err := bs.newBlock(txs, creator)
 	difficulty := bs.blockchain.CurrentDifficulty()
-	blockAdded := bs.blockAdded
+	tipCtx := bs.tipCtx
 	bs.mu.RUnlock()
+
+	mineCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	stop := context.AfterFunc(tipCtx, func() {
+		cancel(context.Cause(tipCtx))
+	})
+	defer stop()
 
 	if err != nil {
 		return block.Block{}, fmt.Errorf("create block: %w", err)
@@ -72,7 +84,7 @@ func (bs *Service) MineAndAddBlock(
 	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
 	start := time.Now()
 
-	if err := newBlock.Mine(ctx, blockAdded, difficulty); err != nil {
+	if err := newBlock.Mine(mineCtx, difficulty); err != nil {
 		return block.Block{}, err
 	}
 
@@ -125,10 +137,8 @@ func (bs *Service) AddBlock(block block.Block) error {
 	}
 
 	bs.blockchain.AppendBlock(block)
-
-	close(bs.blockAdded)
-	bs.blockAdded = make(chan struct{})
-
+	bs.tipCancel(TipChangedError{})
+	bs.tipCtx, bs.tipCancel = context.WithCancelCause(context.Background())
 	bs.logger.Info("block added", "hash", block.Header.Hash().String())
 
 	return nil
