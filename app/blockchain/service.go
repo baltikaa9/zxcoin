@@ -203,11 +203,8 @@ func (bs *Service) applyBlock(block block.Block) error {
 
 		for i, output := range transaction.Outputs {
 			if err := tx.Save(utxo.UTXO{
-				ID: utxo.ID{TxID: hash, OutIndex: uint64(i)},
-				Output: coin.TxOutput{
-					Amount: output.Amount,
-					Owner:  output.Owner,
-				},
+				ID:     utxo.ID{TxID: hash, OutIndex: uint64(i)},
+				Output: output,
 			}); err != nil {
 				return err
 			}

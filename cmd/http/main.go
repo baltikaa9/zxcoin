@@ -25,7 +25,7 @@ func main() {
 
 	defer func() { _ = lg.Sync() }()
 
-	db, err := sql.Open("sqlite", "zxcoin.db")
+	db, err := sql.Open("sqlite", "file:zxcoin.db?_pragma=foreign_keys(1)")
 
 	if err != nil {
 		panic(err)

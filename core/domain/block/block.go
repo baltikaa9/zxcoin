@@ -12,8 +12,8 @@ import (
 
 type Header struct {
 	PrevHash  types.Hash
-	Nonce     uint64
 	RootHash  types.Hash
+	Nonce     uint64
 	Timestamp uint32
 }
 

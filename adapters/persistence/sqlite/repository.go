@@ -90,7 +90,9 @@ func findByID(e execer, id utxo.ID) (utxo.UTXO, bool, error) {
 	var ownerBytes []byte
 
 	err := e.QueryRow(
-		`SELECT amount, owner_key FROM utxos WHERE tx_id = ? AND out_index = ?`,
+		`SELECT amount, owner_key FROM outputs o WHERE tx_id = ? AND out_index = ? AND NOT EXISTS (
+			SELECT 1 FROM inputs i WHERE i.tx_id = o.tx_id AND i.out_index = o.out_index
+		)`,
 		id.TxID[:], id.OutIndex,
 	).Scan(&amount, &ownerBytes)
 
@@ -122,7 +124,9 @@ func findByOwner(e execer, owner types.PublicKey) ([]utxo.UTXO, error) {
 	}
 
 	rows, err := e.Query(
-		`SELECT tx_id, out_index, amount FROM utxos WHERE owner_key = ?`,
+		`SELECT tx_id, out_index, amount FROM outputs o WHERE owner_key = ? AND NOT EXISTS (
+			SELECT 1 FROM inputs i WHERE i.tx_id = o.tx_id AND i.out_index = o.out_index
+		)`,
 		ownerBytes,
 	)
 
@@ -167,7 +171,7 @@ func save(e execer, u utxo.UTXO) error {
 	}
 
 	_, err = e.Exec(
-		`INSERT INTO utxos (tx_id, out_index, amount, owner_key)
+		`INSERT INTO outputs (tx_id, out_index, amount, owner_key)
 		VALUES (?, ?, ?, ?)
 		ON CONFLICT (tx_id, out_index) DO UPDATE SET
 			amount = excluded.amount,
@@ -182,12 +186,7 @@ func save(e execer, u utxo.UTXO) error {
 }
 
 func deleteByID(e execer, id utxo.ID) error {
-	_, err := e.Exec(
-		`DELETE FROM utxos WHERE tx_id = ? AND out_index = ?`,
-		id.TxID[:], id.OutIndex,
-	)
-
-	return err
+	return nil
 }
 
 func decodePublicKey(b []byte) (types.PublicKey, error) {
