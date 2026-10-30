@@ -12,7 +12,7 @@ import (
 
 func TestValidate_UTXONotFound(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 
 	tx := transaction.Transaction{
@@ -37,7 +37,7 @@ func TestValidate_UTXONotFound(t *testing.T) {
 func TestValidate_InvalidSignature(t *testing.T) {
 	_, publicKey := testutil.GenerateKeyPair(t)
 	attackerPrivateKey, _ := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
@@ -63,7 +63,7 @@ func TestValidate_InvalidSignature(t *testing.T) {
 
 func TestValidate_InsufficientFunds(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
@@ -89,7 +89,7 @@ func TestValidate_InsufficientFunds(t *testing.T) {
 
 func TestValidate_NonPositiveOutputZero(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
@@ -115,7 +115,7 @@ func TestValidate_NonPositiveOutputZero(t *testing.T) {
 
 func TestValidate_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)
@@ -143,7 +143,7 @@ func TestValidate_Success(t *testing.T) {
 
 func TestValidate_DuplicateInputs(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := Validator{repo}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, repo)

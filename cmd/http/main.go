@@ -37,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	repo := sqlite.NewRepository(db)
+	repo := sqlite.NewUTXO(db)
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator, lg)
 	bc := blockchain.NewBlockchain(2, 42)

@@ -6,8 +6,8 @@ import (
 )
 
 type Repository interface {
-	FindByHash(hash types.Hash) (*block.Block, error)
-	FindByHeight(height int) (*block.Block, error)
+	FindByHash(hash types.Hash) (block.Block, bool, error)
+	FindByHeight(height int) ([]block.Block, error)
 	List(from int, limit int) ([]block.Block, error)
 	Save(block block.Block, height int) error
 	Tip() (*block.Block, int, error)

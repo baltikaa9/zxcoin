@@ -11,18 +11,18 @@ import (
 
 var errTransactionClosed = errors.New("transaction is closed")
 
-var _ apputxo.Repository = (*Repository)(nil)
+var _ apputxo.Repository = (*Block)(nil)
 
-type Repository struct {
+type Block struct {
 	mu sync.RWMutex
 	db map[utxo.ID]utxo.UTXO
 }
 
-func NewRepository() *Repository {
-	return &Repository{db: make(map[utxo.ID]utxo.UTXO)}
+func NewBlock() *Block {
+	return &Block{db: make(map[utxo.ID]utxo.UTXO)}
 }
 
-func (r *Repository) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
+func (r *Block) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -30,7 +30,7 @@ func (r *Repository) FindByID(id utxo.ID) (utxo.UTXO, bool, error) {
 	return u, exists, nil
 }
 
-func (r *Repository) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
+func (r *Block) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -45,7 +45,7 @@ func (r *Repository) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	return utxos, nil
 }
 
-func (r *Repository) Save(u utxo.UTXO) error {
+func (r *Block) Save(u utxo.UTXO) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -53,7 +53,7 @@ func (r *Repository) Save(u utxo.UTXO) error {
 	return nil
 }
 
-func (r *Repository) Delete(id utxo.ID) error {
+func (r *Block) Delete(id utxo.ID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (r *Repository) Delete(id utxo.ID) error {
 	return nil
 }
 
-func (r *Repository) Begin() (apputxo.Transaction, error) {
+func (r *Block) Begin() (apputxo.Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -79,7 +79,7 @@ func (r *Repository) Begin() (apputxo.Transaction, error) {
 }
 
 type transaction struct {
-	repository *Repository
+	repository *Block
 	db         map[utxo.ID]utxo.UTXO
 	closed     bool
 }

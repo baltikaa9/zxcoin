@@ -20,7 +20,7 @@ import (
 func newBlockchainService(t *testing.T, difficulty int, award int) *Service {
 	t.Helper()
 	bc := blockchain.NewBlockchain(uint64(difficulty), uint64(award))
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := apptransaction.NewValidator(repo)
 	logger := logger.Nop()
 	mp := mempool.NewMempool(validator, logger)

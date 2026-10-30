@@ -42,7 +42,7 @@ func main() {
 
 func run(lg applogger.Logger) error {
 	lg.Info("started")
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := wallet.NewReservationTracker()
 	validator := transaction.NewValidator(repo)
 	mp := mempool.NewMempool(validator, lg)

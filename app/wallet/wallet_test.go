@@ -13,7 +13,7 @@ import (
 )
 
 func TestCreateTransaction_InsufficientFunds(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 	logger := logger.Nop()
 
@@ -28,7 +28,7 @@ func TestCreateTransaction_InsufficientFunds(t *testing.T) {
 }
 
 func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 
 	logger := logger.Nop()
@@ -44,7 +44,7 @@ func TestCreateTransaction_InsufficientFundsEmptyWallet(t *testing.T) {
 }
 
 func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 
 	logger := logger.Nop()
@@ -106,7 +106,7 @@ func TestCreateTransaction_SuccessSingleInput(t *testing.T) {
 }
 
 func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 
 	logger := logger.Nop()
@@ -192,7 +192,7 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 }
 
 func TestCreateTransaction_SuccessChange(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 
 	logger := logger.Nop()
@@ -264,7 +264,7 @@ func TestCreateTransaction_SuccessChange(t *testing.T) {
 }
 
 func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	tracker := NewReservationTracker()
 
 	logger := logger.Nop()

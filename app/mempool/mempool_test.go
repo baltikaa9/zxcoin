@@ -15,7 +15,7 @@ import (
 
 func TestAdd(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := apptransaction.NewValidator(repo)
 	logger := logger.Nop()
 	mempool := NewMempool(validator, logger)
@@ -50,7 +50,7 @@ func TestAdd(t *testing.T) {
 
 func TestAdd_DoubleSpent(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
-	repo := inmemory.NewRepository()
+	repo := inmemory.NewBlock()
 	validator := apptransaction.NewValidator(repo)
 	logger := logger.Nop()
 	mempool := NewMempool(validator, logger)

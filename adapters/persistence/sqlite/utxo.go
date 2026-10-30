@@ -1,8 +1,6 @@
 package sqlite
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -99,14 +97,4 @@ func (r *UTXO) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 	}
 
 	return result, rows.Err()
-}
-
-func decodePublicKey(b []byte) (types.PublicKey, error) {
-	key, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), b)
-
-	if err != nil {
-		return types.PublicKey{}, err
-	}
-
-	return types.PublicKey{PublicKey: key}, nil
 }
