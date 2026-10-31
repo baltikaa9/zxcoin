@@ -13,6 +13,8 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
+const blockColumns = "height, prev_hash, root_hash, nonce, timestamp"
+
 var _ appblock.Repository = (*Block)(nil)
 
 type Block struct {
@@ -32,92 +34,16 @@ func (r *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
 
 	defer tx.Rollback()
 
-	var b block.Block
-	var prevHash, rootHash []byte
-
-	err = tx.QueryRow(
-		`SELECT prev_hash, root_hash, nonce, timestamp FROM blocks WHERE hash = ?`,
+	b, _, exists, err := queryBlock(
+		tx,
+		`SELECT `+blockColumns+` FROM blocks WHERE hash = ?`,
 		hash[:],
-	).Scan(&prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return block.Block{}, false, nil
-	}
-
-	if err != nil {
-		return block.Block{}, false, err
-	}
-
-	if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
-		return block.Block{}, false, err
-	}
-
-	txs, err := loadBlockTransactions(tx, b.Header.Hash())
-
-	if err != nil {
-		return block.Block{}, false, err
-	}
-
-	b.Transactions = txs
-
-	return b, true, nil
-}
-
-func (r *Block) FindByHeight(height int) ([]block.Block, error) {
-	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer tx.Rollback()
-
-	blocks := make([]block.Block, 0)
-
-	rows, err := tx.Query(
-		`SELECT prev_hash, root_hash, nonce, timestamp FROM blocks WHERE height = ? ORDER BY hash`,
-		height,
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var b block.Block
-		var prevHash, rootHash []byte
-
-		if err := rows.Scan(&prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp); err != nil {
-			return nil, err
-		}
-
-		if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
-			return nil, err
-		}
-
-		blocks = append(blocks, b)
-	}
-
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-
-	for i, b := range blocks {
-		txs, err := loadBlockTransactions(tx, b.Header.Hash())
-
-		if err != nil {
-			return nil, err
-		}
-
-		blocks[i].Transactions = txs
-	}
-
-	return blocks, nil
+	return b, exists, err
 }
 
-func (r *Block) Tip() (block.Block, int, bool, error) {
+func (r *Block) Tip() (block.Block, uint64, bool, error) {
 	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 
 	if err != nil {
@@ -126,43 +52,48 @@ func (r *Block) Tip() (block.Block, int, bool, error) {
 
 	defer tx.Rollback()
 
-	var b block.Block
-	var prevHash, rootHash []byte
-	var height int
-
-	err = tx.QueryRow(
-		`SELECT height, prev_hash, root_hash, nonce, timestamp
-		FROM blocks
+	return queryBlock(
+		tx,
+		`SELECT `+blockColumns+` FROM blocks
 		ORDER BY height DESC, rowid ASC
 		LIMIT 1`,
-	).Scan(&height, &prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return block.Block{}, 0, false, nil
-	}
-
-	if err != nil {
-		return block.Block{}, 0, false, err
-	}
-
-	if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
-		return block.Block{}, 0, false, err
-	}
-
-	txs, err := loadBlockTransactions(tx, b.Header.Hash())
-
-	if err != nil {
-		return block.Block{}, 0, false, err
-	}
-
-	b.Transactions = txs
-
-	return b, height, true, nil
+	)
 }
 
-func (r *Block) List(from int, limit int) ([]block.Block, error) {}
+func (r *Block) FindByHeight(height uint64) ([]block.Block, error) {
+	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 
-func (r *Block) Save(b block.Block, height int) error {
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+
+	return queryBlocks(
+		tx,
+		`SELECT `+blockColumns+` FROM blocks WHERE height = ? ORDER BY hash`,
+		height,
+	)
+}
+
+func (r *Block) List(from uint64, limit uint64) ([]block.Block, error) {
+	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+
+	return queryBlocks(
+		tx,
+		`SELECT `+blockColumns+` FROM blocks WHERE height >= ? ORDER BY height, rowid LIMIT ?`,
+		from,
+		limit,
+	)
+}
+
+func (r *Block) Save(b block.Block, height uint64) error {
 	ownerBytes, err := u.Output.Owner.Bytes()
 
 	if err != nil {
@@ -334,4 +265,74 @@ func loadOutputs(tx *sql.Tx, blockHash types.Hash, txs []transaction.Transaction
 	}
 
 	return rows.Err()
+}
+
+func queryBlock(tx *sql.Tx, query string, args ...any) (block.Block, uint64, bool, error) {
+	var b block.Block
+	var prevHash, rootHash []byte
+	var height uint64
+
+	if err := tx.QueryRow(query, args...).Scan(&height, &prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp); errors.Is(err, sql.ErrNoRows) {
+		return block.Block{}, 0, false, nil
+	} else if err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	if err := decodeHeader(prevHash, rootHash, &b.Header); err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	txs, err := loadBlockTransactions(tx, b.Header.Hash())
+
+	if err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	b.Transactions = txs
+
+	return b, height, true, nil
+}
+
+func queryBlocks(tx *sql.Tx, query string, args ...any) ([]block.Block, error) {
+	rows, err := tx.Query(query, args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	blocks := make([]block.Block, 0)
+
+	for rows.Next() {
+		var b block.Block
+		var prevHash, rootHash []byte
+		var height uint64
+
+		if err := rows.Scan(&height, &prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp); err != nil {
+			return nil, err
+		}
+
+		if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
+			return nil, err
+		}
+
+		blocks = append(blocks, b)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	for i, b := range blocks {
+		txs, err := loadBlockTransactions(tx, b.Header.Hash())
+
+		if err != nil {
+			return nil, err
+		}
+
+		blocks[i].Transactions = txs
+	}
+
+	return blocks, nil
 }
