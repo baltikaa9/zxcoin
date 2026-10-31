@@ -48,11 +48,7 @@ func (r *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
 		return block.Block{}, false, err
 	}
 
-	if b.Header.PrevHash, err = decodeHash(prevHash); err != nil {
-		return block.Block{}, false, err
-	}
-
-	if b.Header.RootHash, err = decodeHash(rootHash); err != nil {
+	if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
 		return block.Block{}, false, err
 	}
 
@@ -97,11 +93,7 @@ func (r *Block) FindByHeight(height int) ([]block.Block, error) {
 			return nil, err
 		}
 
-		if b.Header.PrevHash, err = decodeHash(prevHash); err != nil {
-			return nil, err
-		}
-
-		if b.Header.RootHash, err = decodeHash(rootHash); err != nil {
+		if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
 			return nil, err
 		}
 
@@ -125,8 +117,50 @@ func (r *Block) FindByHeight(height int) ([]block.Block, error) {
 	return blocks, nil
 }
 
+func (r *Block) Tip() (block.Block, int, bool, error) {
+	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+
+	if err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	defer tx.Rollback()
+
+	var b block.Block
+	var prevHash, rootHash []byte
+	var height int
+
+	err = tx.QueryRow(
+		`SELECT height, prev_hash, root_hash, nonce, timestamp
+		FROM blocks
+		ORDER BY height DESC, rowid ASC
+		LIMIT 1`,
+	).Scan(&height, &prevHash, &rootHash, &b.Header.Nonce, &b.Header.Timestamp)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return block.Block{}, 0, false, nil
+	}
+
+	if err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	if err = decodeHeader(prevHash, rootHash, &b.Header); err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	txs, err := loadBlockTransactions(tx, b.Header.Hash())
+
+	if err != nil {
+		return block.Block{}, 0, false, err
+	}
+
+	b.Transactions = txs
+
+	return b, height, true, nil
+}
+
 func (r *Block) List(from int, limit int) ([]block.Block, error) {}
-func (r *Block) Tip() (*block.Block, int, error)                 {}
 
 func (r *Block) Save(b block.Block, height int) error {
 	ownerBytes, err := u.Output.Owner.Bytes()
