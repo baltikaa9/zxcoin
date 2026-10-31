@@ -43,3 +43,7 @@ func (bc *Blockchain) LastHash() types.Hash {
 
 	return bc.blocks[len(bc.blocks)-1].Header.Hash()
 }
+
+func (bc *Blockchain) NextHeight() uint64 {
+	return uint64(len(bc.blocks))
+}

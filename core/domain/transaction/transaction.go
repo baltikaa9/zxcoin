@@ -45,8 +45,9 @@ func ParseSignature(raw []byte) (Signature, error) {
 }
 
 type Transaction struct {
-	Inputs  []TxInput
-	Outputs []coin.TxOutput
+	CoinbaseHeight uint64
+	Inputs         []TxInput
+	Outputs        []coin.TxOutput
 }
 
 func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa.PrivateKey) (Transaction, error) {
@@ -174,7 +175,8 @@ func (t Transaction) ValidateDuplicatesInputs() error {
 }
 
 func (t Transaction) serialize() ([]byte, error) {
-	buf := binary.BigEndian.AppendUint32(nil, uint32(len(t.Inputs)))
+	buf := binary.BigEndian.AppendUint64(nil, t.CoinbaseHeight)
+	buf = binary.BigEndian.AppendUint32(buf, uint32(len(t.Inputs)))
 
 	for _, input := range t.Inputs {
 		buf = append(buf, input.serialize()...)

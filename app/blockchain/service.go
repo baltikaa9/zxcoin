@@ -150,7 +150,8 @@ func (bs *Service) newBlock(
 ) (block.Block, error) {
 	bs.logger.Debug("creating block", "creator", creator.Short())
 	coinbaseTransaction := transaction.Transaction{
-		Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: creator}},
+		CoinbaseHeight: bs.blockchain.NextHeight(),
+		Outputs:        []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: creator}},
 	}
 	bs.logger.Debug("coinbase transaction created", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
 

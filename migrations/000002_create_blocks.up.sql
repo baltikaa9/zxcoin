@@ -15,6 +15,7 @@ CREATE INDEX idx_block_height ON blocks (height);
 CREATE TABLE transactions (
     hash BLOB NOT NULL CHECK (length(hash) = 32),
     block_hash BLOB NOT NULL CHECK (length(block_hash) = 32) REFERENCES blocks (hash),
+    coinbase_height INTEGER NOT NULL DEFAULT 0,
     position INTEGER NOT NULL,
     PRIMARY KEY (hash)
 );

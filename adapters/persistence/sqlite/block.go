@@ -204,7 +204,7 @@ func loadBlockTransactions(tx *sql.Tx, hash types.Hash) ([]transaction.Transacti
 
 func loadTransactionStubs(tx *sql.Tx, blockHash types.Hash) ([]transaction.Transaction, map[types.Hash]int, error) {
 	rows, err := tx.Query(
-		`SELECT hash FROM transactions WHERE block_hash = ? ORDER BY position`,
+		`SELECT hash, coinbase_height FROM transactions WHERE block_hash = ? ORDER BY position`,
 		blockHash[:],
 	)
 
@@ -219,8 +219,9 @@ func loadTransactionStubs(tx *sql.Tx, blockHash types.Hash) ([]transaction.Trans
 
 	for rows.Next() {
 		var hash []byte
+		var coinbaseHeight uint64
 
-		if err := rows.Scan(&hash); err != nil {
+		if err := rows.Scan(&hash, &coinbaseHeight); err != nil {
 			return nil, nil, err
 		}
 
@@ -231,7 +232,7 @@ func loadTransactionStubs(tx *sql.Tx, blockHash types.Hash) ([]transaction.Trans
 		}
 
 		index[h] = len(txs)
-		txs = append(txs, transaction.Transaction{})
+		txs = append(txs, transaction.Transaction{CoinbaseHeight: coinbaseHeight})
 	}
 
 	return txs, index, rows.Err()
