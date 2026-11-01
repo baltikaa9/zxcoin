@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	appblock "github.com/baltikaa9/zxcoin/app/block"
 	"github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
-	utxoapp "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/core/domain/block"
 	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -25,7 +25,7 @@ type Service struct {
 	tipCtx     context.Context
 	tipCancel  context.CancelCauseFunc
 	blockchain *blockchain.Blockchain
-	utxoRepo   utxoapp.Repository
+	blockRepo  appblock.Repository
 	validator  *apptransaction.Validator
 	mempool    *mempool.Mempool
 	logger     logger.Logger
@@ -33,7 +33,7 @@ type Service struct {
 
 func NewService(
 	blockchain *blockchain.Blockchain,
-	utxoRepo utxoapp.Repository,
+	blockRepo appblock.Repository,
 	validator *apptransaction.Validator,
 	mempool *mempool.Mempool,
 	logger logger.Logger,
@@ -44,7 +44,7 @@ func NewService(
 		tipCtx:     ctx,
 		tipCancel:  cancel,
 		blockchain: blockchain,
-		utxoRepo:   utxoRepo,
+		blockRepo:  blockRepo,
 		validator:  validator,
 		mempool:    mempool,
 		logger:     logger.Named("blockchain"),
@@ -181,38 +181,8 @@ func (bs *Service) newBlock(
 
 func (bs *Service) applyBlock(block block.Block) error {
 	bs.logger.Debug("applying block", "hash", block.Header.Hash().String())
-	tx, err := bs.utxoRepo.Begin()
 
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = tx.Rollback() }()
-
-	for _, transaction := range block.Transactions {
-		hash, err := transaction.Hash()
-
-		if err != nil {
-			return err
-		}
-
-		for _, input := range transaction.Inputs {
-			if err := tx.Delete(input.ID); err != nil {
-				return err
-			}
-		}
-
-		for i, output := range transaction.Outputs {
-			if err := tx.Save(utxo.UTXO{
-				ID:     utxo.ID{TxID: hash, OutIndex: uint64(i)},
-				Output: output,
-			}); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err = tx.Commit(); err != nil {
+	if err := bs.blockRepo.Save(block, bs.blockchain.NextHeight()); err != nil {
 		return err
 	}
 

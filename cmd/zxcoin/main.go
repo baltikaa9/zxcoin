@@ -2,33 +2,35 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	adapterlogger "github.com/baltikaa9/zxcoin/adapters/logger"
-	"github.com/baltikaa9/zxcoin/adapters/persistence/inmemory"
+	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
 	appblockchain "github.com/baltikaa9/zxcoin/app/blockchain"
 	applogger "github.com/baltikaa9/zxcoin/app/logger"
 	"github.com/baltikaa9/zxcoin/app/mempool"
-	"github.com/baltikaa9/zxcoin/app/transaction"
+	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/app/wallet"
+	"github.com/baltikaa9/zxcoin/core/domain/block"
 	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
+	"github.com/baltikaa9/zxcoin/core/domain/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
-	"github.com/baltikaa9/zxcoin/core/domain/utxo"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
 	lg, err := adapterlogger.NewZapLogger("logs/zxcoin.json")
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	err = run(lg)
-
 	if err != nil {
 		lg.Error("demo failed", "err", err)
 	}
@@ -42,35 +44,43 @@ func main() {
 
 func run(lg applogger.Logger) error {
 	lg.Info("started")
-	repo := inmemory.NewBlock()
+
+	db, err := openDB()
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+
+	defer db.Close()
+
+	utxoRepo := sqlite.NewUTXO(db)
+	blockRepo := sqlite.NewBlock(db)
 	tracker := wallet.NewReservationTracker()
-	validator := transaction.NewValidator(repo)
+	validator := apptransaction.NewValidator(utxoRepo)
 	mp := mempool.NewMempool(validator, lg)
 	bc := blockchain.NewBlockchain(4, 42)
-	bs := appblockchain.NewService(bc, repo, validator, mp, lg)
+	bs := appblockchain.NewService(bc, blockRepo, validator, mp, lg)
 
-	myWallet := wallet.NewWallet(tracker, repo, lg)
-	otherWallet := wallet.NewWallet(tracker, repo, lg)
+	myWallet := wallet.NewWallet(tracker, utxoRepo, lg)
+	otherWallet := wallet.NewWallet(tracker, utxoRepo, lg)
 
-	for i, amount := range []uint64{5, 3, 11, 10} {
-		u := utxo.UTXO{
-			ID:     utxo.ID{TxID: types.Hash{}, OutIndex: uint64(i)},
-			Output: coin.TxOutput{Amount: amount, Owner: myWallet.PublicKey},
-		}
-
-		if err := repo.Save(u); err != nil {
-			return fmt.Errorf("save utxo: %w", err)
-		}
+	genesis, err := newGenesis(myWallet.PublicKey, 5, 3, 11, 10)
+	if err != nil {
+		return fmt.Errorf("create genesis: %w", err)
 	}
+
+	if err := blockRepo.Save(genesis, bc.NextHeight()); err != nil {
+		return fmt.Errorf("save genesis: %w", err)
+	}
+
+	bc.AppendBlock(genesis)
 
 	fmt.Println("было")
 
-	if err := printBalances(repo, myWallet, otherWallet); err != nil {
+	if err := printBalances(utxoRepo, myWallet, otherWallet); err != nil {
 		return err
 	}
 
 	t1, err := myWallet.CreateTransaction(otherWallet.PublicKey, 10)
-
 	if err != nil {
 		return fmt.Errorf("create transaction: %w", err)
 	}
@@ -85,7 +95,59 @@ func run(lg applogger.Logger) error {
 
 	fmt.Println("стало")
 
-	return printBalances(repo, myWallet, otherWallet)
+	return printBalances(utxoRepo, myWallet, otherWallet)
+}
+
+func openDB() (*sql.DB, error) {
+	db, err := sql.Open("sqlite", "file::memory:?_pragma=foreign_keys(1)")
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Каждое соединение с :memory: получает свою пустую базу.
+	db.SetMaxOpenConns(1)
+
+	migrations, err := filepath.Glob("migrations/*.up.sql")
+
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	for _, path := range migrations {
+		migration, err := os.ReadFile(path)
+
+		if err != nil {
+			db.Close()
+			return nil, err
+		}
+
+		if _, err := db.Exec(string(migration)); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+	}
+
+	return db, nil
+}
+
+func newGenesis(owner types.PublicKey, amounts ...uint64) (block.Block, error) {
+	outputs := make([]coin.TxOutput, 0, len(amounts))
+
+	for _, amount := range amounts {
+		outputs = append(outputs, coin.TxOutput{Amount: amount, Owner: owner})
+	}
+
+	genesis := block.Block{
+		Transactions: []transaction.Transaction{{Outputs: outputs}},
+	}
+
+	if err := genesis.CalculateRootHash(); err != nil {
+		return block.Block{}, err
+	}
+
+	return genesis, nil
 }
 
 func printBalances(repo apputxo.Repository, my, other wallet.Wallet) error {

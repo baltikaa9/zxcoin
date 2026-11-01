@@ -10,14 +10,13 @@ import (
 
 func main() {
 	lg, err := logger.NewZapLogger("logs/wallet.json")
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer func() { _ = lg.Sync() }()
 
-	w := wallet.NewWallet(wallet.NewReservationTracker(), inmemory.NewBlock(), lg)
+	w := wallet.NewWallet(wallet.NewReservationTracker(), inmemory.NewUTXO(), lg)
 
 	if err := wallet.SavePrivateKey("other.key", w.PrivateKey); err != nil {
 		log.Fatal(err)

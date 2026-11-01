@@ -32,3 +32,8 @@ func (r *UTXO) FindByOwner(owner types.PublicKey) ([]utxo.UTXO, error) {
 
 	return utxos, nil
 }
+
+func (r *UTXO) Save(u utxo.UTXO) error {
+	r.db[u.ID] = u
+	return nil
+}

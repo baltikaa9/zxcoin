@@ -37,17 +37,18 @@ func main() {
 		panic(err)
 	}
 
-	repo := sqlite.NewUTXO(db)
-	validator := transaction.NewValidator(repo)
+	utxoRepo := sqlite.NewUTXO(db)
+	blockRepo := sqlite.NewBlock(db)
+	validator := transaction.NewValidator(utxoRepo)
 	mp := mempool.NewMempool(validator, lg)
 	bc := blockchain.NewBlockchain(2, 42)
-	bs := appblockchain.NewService(bc, repo, validator, mp, lg)
+	bs := appblockchain.NewService(bc, blockRepo, validator, mp, lg)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /transactions", handlers.NewMempool(mp, lg).AddTransaction)
-	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXO(repo, lg).GetUTXOByOwner)
+	mux.HandleFunc("GET /utxo/{owner}", handlers.NewUTXO(utxoRepo, lg).GetUTXOByOwner)
 	mux.HandleFunc("POST /mine", handlers.NewMining(bs, lg).Mine)
 
 	handler := middleware.Logging(lg.Named("http"))(
