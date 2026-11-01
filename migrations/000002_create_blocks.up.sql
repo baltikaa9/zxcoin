@@ -7,10 +7,9 @@ CREATE TABLE blocks (
     root_hash BLOB NOT NULL CHECK (length(root_hash) = 32),
     nonce INTEGER NOT NULL,
     timestamp  INTEGER NOT NULL,
-    PRIMARY KEY (hash)
+    PRIMARY KEY (hash),
+    UNIQUE (height)
 );
-
-CREATE INDEX idx_blocks_height ON blocks (height);
 
 CREATE TABLE transactions (
     hash BLOB NOT NULL CHECK (length(hash) = 32),
@@ -42,4 +41,4 @@ CREATE TABLE inputs (
     FOREIGN KEY (tx_id, out_index) REFERENCES outputs (tx_id, out_index)
 );
 
-CREATE INDEX idx_inputs_tx_hash ON transactions (tx_hash, position);
+CREATE INDEX idx_inputs_tx_hash ON inputs (tx_hash, position);

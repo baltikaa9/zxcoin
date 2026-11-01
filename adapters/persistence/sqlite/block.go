@@ -42,6 +42,23 @@ func (br *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
 	return b, exists, err
 }
 
+func (br *Block) FindByHeight(height uint64) (block.Block, bool, error) {
+	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return block.Block{}, false, err
+	}
+
+	defer tx.Rollback()
+
+	b, _, exists, err := queryBlock(
+		tx,
+		`SELECT `+blockColumns+` FROM blocks WHERE height = ?`,
+		height,
+	)
+
+	return b, exists, err
+}
+
 func (br *Block) Tip() (block.Block, uint64, bool, error) {
 	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -53,23 +70,8 @@ func (br *Block) Tip() (block.Block, uint64, bool, error) {
 	return queryBlock(
 		tx,
 		`SELECT `+blockColumns+` FROM blocks
-		ORDER BY height DESC, rowid ASC
+		ORDER BY height DESC
 		LIMIT 1`,
-	)
-}
-
-func (br *Block) FindByHeight(height uint64) ([]block.Block, error) {
-	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-
-	defer tx.Rollback()
-
-	return queryBlocks(
-		tx,
-		`SELECT `+blockColumns+` FROM blocks WHERE height = ? ORDER BY hash`,
-		height,
 	)
 }
 
@@ -83,7 +85,7 @@ func (br *Block) List(from uint64, limit uint64) ([]block.Block, error) {
 
 	return queryBlocks(
 		tx,
-		`SELECT `+blockColumns+` FROM blocks WHERE height >= ? ORDER BY height, rowid LIMIT ?`,
+		`SELECT `+blockColumns+` FROM blocks WHERE height >= ? ORDER BY height LIMIT ?`,
 		from,
 		limit,
 	)
@@ -128,7 +130,7 @@ func (br *Block) Save(b block.Block, height uint64) error {
 			if err != nil {
 				return err
 			}
-			
+
 			if _, err := tx.Exec(
 				`INSERT INTO outputs (tx_id, out_index, amount, owner_key)
 				VALUES (?, ?, ?, ?)`,
