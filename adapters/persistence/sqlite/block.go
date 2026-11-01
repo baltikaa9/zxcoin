@@ -25,9 +25,8 @@ func NewBlock(db *sql.DB) *Block {
 	return &Block{db: db}
 }
 
-func (r *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
-	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-
+func (br *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
+	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return block.Block{}, false, err
 	}
@@ -43,9 +42,8 @@ func (r *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
 	return b, exists, err
 }
 
-func (r *Block) Tip() (block.Block, uint64, bool, error) {
-	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-
+func (br *Block) Tip() (block.Block, uint64, bool, error) {
+	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return block.Block{}, 0, false, err
 	}
@@ -60,9 +58,8 @@ func (r *Block) Tip() (block.Block, uint64, bool, error) {
 	)
 }
 
-func (r *Block) FindByHeight(height uint64) ([]block.Block, error) {
-	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-
+func (br *Block) FindByHeight(height uint64) ([]block.Block, error) {
+	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +73,8 @@ func (r *Block) FindByHeight(height uint64) ([]block.Block, error) {
 	)
 }
 
-func (r *Block) List(from uint64, limit uint64) ([]block.Block, error) {
-	tx, err := r.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
-
+func (br *Block) List(from uint64, limit uint64) ([]block.Block, error) {
+	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -93,31 +89,71 @@ func (r *Block) List(from uint64, limit uint64) ([]block.Block, error) {
 	)
 }
 
-func (r *Block) Save(b block.Block, height uint64) error {
-	ownerBytes, err := u.Output.Owner.Bytes()
-
+func (br *Block) Save(b block.Block, height uint64) error {
+	tx, err := br.db.Begin()
 	if err != nil {
 		return err
 	}
 
-	_, err = e.Exec(
-		`INSERT INTO outputs (tx_id, out_index, amount, owner_key)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT (tx_id, out_index) DO UPDATE SET
-			amount = excluded.amount,
-			owner_key = excluded.owner_key`,
-		u.ID.TxID[:],
-		u.ID.OutIndex,
-		u.Output.Amount,
-		ownerBytes,
-	)
+	defer tx.Rollback()
 
-	return err
+	blockHash := b.Header.Hash()
+	prevHash := b.Header.PrevHash
+	rootHash := b.Header.RootHash
+
+	if _, err := tx.Exec(
+		`INSERT INTO blocks (hash, `+blockColumns+`)
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		blockHash[:], height, prevHash[:], rootHash[:], b.Header.Nonce, b.Header.Timestamp,
+	); err != nil {
+		return err
+	}
+
+	for i, t := range b.Transactions {
+		hash, err := t.Hash()
+		if err != nil {
+			return err
+		}
+
+		if _, err := tx.Exec(
+			`INSERT INTO transactions (hash, block_hash, coinbase_height, position)
+			VALUES (?, ?, ?, ?)`,
+			hash[:], blockHash[:], t.CoinbaseHeight, i,
+		); err != nil {
+			return err
+		}
+
+		for j, output := range t.Outputs {
+			ownerKey, err := output.Owner.Bytes()
+			if err != nil {
+				return err
+			}
+			
+			if _, err := tx.Exec(
+				`INSERT INTO outputs (tx_id, out_index, amount, owner_key)
+				VALUES (?, ?, ?, ?)`,
+				hash[:], j, output.Amount, ownerKey,
+			); err != nil {
+				return err
+			}
+		}
+
+		for j, input := range t.Inputs {
+			if _, err := tx.Exec(
+				`INSERT INTO inputs (tx_id, out_index, signature, tx_hash, position)
+				VALUES (?, ?, ?, ?, ?)`,
+				input.ID.TxID[:], input.ID.OutIndex, input.Signature.Marshal(), hash[:], j,
+			); err != nil {
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
 }
 
 func loadBlockTransactions(tx *sql.Tx, hash types.Hash) ([]transaction.Transaction, error) {
 	txs, index, err := loadTransactionStubs(tx, hash)
-
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +174,6 @@ func loadTransactionStubs(tx *sql.Tx, blockHash types.Hash) ([]transaction.Trans
 		`SELECT hash, coinbase_height FROM transactions WHERE block_hash = ? ORDER BY position`,
 		blockHash[:],
 	)
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -157,7 +192,6 @@ func loadTransactionStubs(tx *sql.Tx, blockHash types.Hash) ([]transaction.Trans
 		}
 
 		h, err := decodeHash(hash)
-
 		if err != nil {
 			return nil, nil, err
 		}
@@ -178,7 +212,6 @@ func loadInputs(tx *sql.Tx, blockHash types.Hash, txs []transaction.Transaction,
 		ORDER BY t.position, i.position`,
 		blockHash[:],
 	)
-
 	if err != nil {
 		return err
 	}
@@ -194,19 +227,16 @@ func loadInputs(tx *sql.Tx, blockHash types.Hash, txs []transaction.Transaction,
 		}
 
 		h, err := decodeHash(txHash)
-
 		if err != nil {
 			return err
 		}
 
 		prevID, err := decodeHash(prevTxID)
-
 		if err != nil {
 			return err
 		}
 
 		sig, err := transaction.ParseSignature(sigBytes)
-
 		if err != nil {
 			return err
 		}
@@ -230,7 +260,6 @@ func loadOutputs(tx *sql.Tx, blockHash types.Hash, txs []transaction.Transaction
 		ORDER BY t.position, o.out_index`,
 		blockHash[:],
 	)
-
 	if err != nil {
 		return err
 	}
@@ -246,13 +275,11 @@ func loadOutputs(tx *sql.Tx, blockHash types.Hash, txs []transaction.Transaction
 		}
 
 		h, err := decodeHash(txID)
-
 		if err != nil {
 			return err
 		}
 
 		publicKey, err := decodePublicKey(ownerKey)
-
 		if err != nil {
 			return err
 		}
@@ -283,7 +310,6 @@ func queryBlock(tx *sql.Tx, query string, args ...any) (block.Block, uint64, boo
 	}
 
 	txs, err := loadBlockTransactions(tx, b.Header.Hash())
-
 	if err != nil {
 		return block.Block{}, 0, false, err
 	}
@@ -295,7 +321,6 @@ func queryBlock(tx *sql.Tx, query string, args ...any) (block.Block, uint64, boo
 
 func queryBlocks(tx *sql.Tx, query string, args ...any) ([]block.Block, error) {
 	rows, err := tx.Query(query, args...)
-
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +351,6 @@ func queryBlocks(tx *sql.Tx, query string, args ...any) ([]block.Block, error) {
 
 	for i, b := range blocks {
 		txs, err := loadBlockTransactions(tx, b.Header.Hash())
-
 		if err != nil {
 			return nil, err
 		}
