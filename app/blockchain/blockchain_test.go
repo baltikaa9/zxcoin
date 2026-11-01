@@ -17,21 +17,22 @@ import (
 	"github.com/baltikaa9/zxcoin/core/testutil"
 )
 
-func newBlockchainService(t *testing.T, difficulty int, award int) *Service {
+func newBlockchainService(t *testing.T, difficulty int, award int) (*Service, *inmemory.UTXO) {
 	t.Helper()
 	bc := blockchain.NewBlockchain(uint64(difficulty), uint64(award))
-	repo := inmemory.NewBlock()
-	validator := apptransaction.NewValidator(repo)
+	utxoRepo := inmemory.NewUTXO()
+	blockRepo := inmemory.NewBlock()
+	validator := apptransaction.NewValidator(utxoRepo)
 	logger := logger.Nop()
 	mp := mempool.NewMempool(validator, logger)
 
 	return NewService(
 		bc,
-		repo,
+		blockRepo,
 		validator,
 		mp,
 		logger,
-	)
+	), utxoRepo
 }
 
 func mineGenesisBlock(t *testing.T, bs *Service) block.Block {
@@ -76,11 +77,11 @@ func assertUTXO(t *testing.T, repo apputxo.Repository, id utxo.ID, expectedAmoun
 }
 
 func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, utxoRepo := newBlockchainService(t, 1, 1)
 
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	amount := uint64(5)
-	testutil.GenerateSingleUtxo(t, amount, publicKey, bs.utxoRepo)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
 
 	t1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
@@ -123,12 +124,12 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 }
 
 func TestAddBlock_InvalidNonce(t *testing.T) {
-	bs := newBlockchainService(t, 2, 1)
+	bs, utxoRepo := newBlockchainService(t, 2, 1)
 
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	amount := uint64(5)
 
-	testutil.GenerateSingleUtxo(t, amount, publicKey, bs.utxoRepo)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
 
 	tx := transaction.Transaction{
 		Inputs: []transaction.TxInput{
@@ -160,7 +161,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 }
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	mineGenesisBlock(t, bs)
 	block := block.Block{
@@ -183,7 +184,7 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 }
 
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	genesisBlock := mineGenesisBlock(t, bs)
 	b := block.Block{
@@ -201,7 +202,7 @@ func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 }
 
 func TestAddBlock_MoreOneCoinbase(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 	block := block.Block{
@@ -227,7 +228,7 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 }
 
 func TestNewBlock_CoinbaseExisted(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 	block, err := bs.newBlock([]transaction.Transaction{}, publicKey)
@@ -258,7 +259,7 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 }
 
 func TestNewBlock_ValidPrevHash(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 
@@ -277,7 +278,7 @@ func TestNewBlock_ValidPrevHash(t *testing.T) {
 }
 
 func TestNewBlock_ValidRootHash(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{
@@ -308,7 +309,7 @@ func TestNewBlock_ValidRootHash(t *testing.T) {
 }
 
 func TestAddBlock_CoinbaseExisted(t *testing.T) {
-	bs := newBlockchainService(t, 1, 1)
+	bs, utxoRepo := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}}
@@ -331,7 +332,7 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
 
-	utxos, err := bs.utxoRepo.FindByOwner(publicKey)
+	utxos, err := utxoRepo.FindByOwner(publicKey)
 
 	if err != nil {
 		t.Fatalf("не удалось получить utxo: %v", err)
@@ -347,11 +348,11 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertUTXO(t, bs.utxoRepo, utxo.ID{TxID: hash}, bs.blockchain.CurrentAward(), publicKey)
+	assertUTXO(t, utxoRepo, utxo.ID{TxID: hash}, bs.blockchain.CurrentAward(), publicKey)
 }
 
 func TestMineAndAddBlock_Success(t *testing.T) {
-	bs := newBlockchainService(t, 2, 5)
+	bs, utxoRepo := newBlockchainService(t, 2, 5)
 
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	_, otherPublicKey := testutil.GenerateKeyPair(t)
@@ -402,5 +403,5 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 		t.Fatalf("ошибка при создании и добавлении блока: %v", err)
 	}
 
-	assertUTXO(t, bs.utxoRepo, utxo.ID{TxID: txHash}, bs.blockchain.CurrentAward(), otherPublicKey)
+	assertUTXO(t, utxoRepo, utxo.ID{TxID: txHash}, bs.blockchain.CurrentAward(), otherPublicKey)
 }
