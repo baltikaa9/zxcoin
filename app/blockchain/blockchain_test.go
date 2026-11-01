@@ -21,7 +21,7 @@ func newBlockchainService(t *testing.T, difficulty int, award int) (*Service, *i
 	t.Helper()
 	bc := blockchain.NewBlockchain(uint64(difficulty), uint64(award))
 	utxoRepo := inmemory.NewUTXO()
-	blockRepo := inmemory.NewBlock()
+	blockRepo := inmemory.NewBlock(utxoRepo)
 	validator := apptransaction.NewValidator(utxoRepo)
 	logger := logger.Nop()
 	mp := mempool.NewMempool(validator, logger)
@@ -404,4 +404,45 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 	}
 
 	assertUTXO(t, utxoRepo, utxo.ID{TxID: txHash}, bs.blockchain.CurrentAward(), otherPublicKey)
+}
+
+func TestAddBlock_DoubleSpendAcrossBlocks(t *testing.T) {
+	bs, utxoRepo := newBlockchainService(t, 1, 1)
+
+	privateKey, publicKey := testutil.GenerateKeyPair(t)
+	_, otherPublicKey := testutil.GenerateKeyPair(t)
+	amount := uint64(5)
+	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
+
+	spend := func(owner types.PublicKey) error {
+		tx := transaction.Transaction{
+			Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
+			Outputs: []coin.TxOutput{{Amount: amount, Owner: owner}},
+		}
+		hash, err := tx.Hash()
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := tx.Inputs[0].Sign(privateKey, hash); err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_ = b.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+
+		return bs.AddBlock(b)
+	}
+
+	if err := spend(publicKey); err != nil {
+		t.Fatalf("ошибка при первой трате: %v", err)
+	}
+
+	testutil.CheckError[apptransaction.UTXONotFoundError](t, spend(otherPublicKey))
 }

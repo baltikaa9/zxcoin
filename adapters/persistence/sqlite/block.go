@@ -31,7 +31,7 @@ func (br *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
 		return block.Block{}, false, err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	b, _, exists, err := queryBlock(
 		tx,
@@ -48,7 +48,7 @@ func (br *Block) FindByHeight(height uint64) (block.Block, bool, error) {
 		return block.Block{}, false, err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	b, _, exists, err := queryBlock(
 		tx,
@@ -65,7 +65,7 @@ func (br *Block) Tip() (block.Block, uint64, bool, error) {
 		return block.Block{}, 0, false, err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	return queryBlock(
 		tx,
@@ -81,7 +81,7 @@ func (br *Block) List(from uint64, limit uint64) ([]block.Block, error) {
 		return nil, err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	return queryBlocks(
 		tx,
@@ -97,7 +97,7 @@ func (br *Block) Save(b block.Block, height uint64) error {
 		return err
 	}
 
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	blockHash := b.Header.Hash()
 	prevHash := b.Header.PrevHash

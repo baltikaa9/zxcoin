@@ -124,15 +124,13 @@ func TestCreateTransaction_SuccessMultipleInput(t *testing.T) {
 	}
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
-	if err := repo.Save(utxo.UTXO{
+	repo.Save(utxo.UTXO{
 		ID: id1,
 		Output: coin.TxOutput{
 			Amount: amount,
 			Owner:  myWallet.PublicKey,
 		},
-	}); err != nil {
-		t.Fatalf("не удалось сохранить UTXO: %v", err)
-	}
+	})
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, amount*2)
 
 	if err != nil {
@@ -283,15 +281,13 @@ func TestCreateTransaction_SuccessMultipleInputChange(t *testing.T) {
 	amount := uint64(5)
 	payment := uint64(4)
 	testutil.GenerateSingleUtxo(t, amount, myWallet.PublicKey, repo)
-	if err := repo.Save(utxo.UTXO{
+	repo.Save(utxo.UTXO{
 		ID: id1,
 		Output: coin.TxOutput{
 			Amount: amount,
 			Owner:  myWallet.PublicKey,
 		},
-	}); err != nil {
-		t.Fatalf("не удалось сохранить UTXO: %v", err)
-	}
+	})
 	tx, err := myWallet.CreateTransaction(otherWallet.PublicKey, payment*2)
 
 	if err != nil {

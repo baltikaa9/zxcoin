@@ -14,7 +14,7 @@ import (
 )
 
 type utxoSaver interface {
-	Save(u utxo.UTXO) error
+	Save(u utxo.UTXO)
 }
 
 func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, types.PublicKey) {
@@ -31,17 +31,13 @@ func GenerateKeyPair(t *testing.T) (*ecdsa.PrivateKey, types.PublicKey) {
 func GenerateSingleUtxo(t *testing.T, amount uint64, publicKey types.PublicKey, repo utxoSaver) {
 	t.Helper()
 
-	u := utxo.UTXO{
+	repo.Save(utxo.UTXO{
 		ID: utxo.ID{},
 		Output: coin.TxOutput{
 			Amount: amount,
 			Owner:  publicKey,
 		},
-	}
-
-	if err := repo.Save(u); err != nil {
-		t.Fatalf("не удалось сохранить UTXO: %v", err)
-	}
+	})
 }
 
 func CheckError[E error](t *testing.T, err error) {
