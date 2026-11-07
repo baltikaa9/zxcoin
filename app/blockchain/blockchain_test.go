@@ -35,20 +35,25 @@ func newBlockchainService(t *testing.T, difficulty int, award int) (*Service, *i
 	), utxoRepo
 }
 
-func mineGenesisBlock(t *testing.T, bs *Service) block.Block {
+func mineGenesisBlock(t *testing.T, bs *Service, owner types.PublicKey) block.Block {
 	t.Helper()
 	genesisBlock := block.Block{
-		Header:       block.Header{},
-		Transactions: []transaction.Transaction{},
+		Header: block.Header{},
+		Transactions: []transaction.Transaction{{
+			Outputs: []coin.TxOutput{{
+				Amount: 42,
+				Owner:  owner,
+			}},
+		}},
 	}
 
 	if err := genesisBlock.CalculateRootHash(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("calculate root hash: %v", err)
 	}
 
 	_ = genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 
-	if err := bs.AddBlock(genesisBlock); err != nil {
+	if err := bs.blockRepo.Save(genesisBlock, 0); err != nil {
 		t.Fatalf("ошибка при добавлении генезис-блока: %v", err)
 	}
 
@@ -83,6 +88,8 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
 
+	genesis := mineGenesisBlock(t, bs, publicKey)
+
 	t1 := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.ID{}}},
 		Outputs: []coin.TxOutput{{Amount: amount, Owner: publicKey}},
@@ -111,7 +118,7 @@ func TestAddBlock_DoubleSpendInBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block, err := bs.newBlock([]transaction.Transaction{t1, t2}, publicKey)
+	block, err := bs.newBlock([]transaction.Transaction{t1, t2}, publicKey, 1, genesis.Header.Hash())
 
 	if err != nil {
 		t.Fatal(err)
@@ -128,6 +135,8 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	amount := uint64(5)
+
+	genesis := mineGenesisBlock(t, bs, publicKey)
 
 	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
 
@@ -149,7 +158,7 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey)
+	b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey, 1, genesis.Header.Hash())
 
 	if err != nil {
 		t.Fatal(err)
@@ -162,8 +171,9 @@ func TestAddBlock_InvalidNonce(t *testing.T) {
 
 func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	bs, _ := newBlockchainService(t, 1, 1)
+	_, publicKey := testutil.GenerateKeyPair(t)
+	mineGenesisBlock(t, bs, publicKey)
 
-	mineGenesisBlock(t, bs)
 	block := block.Block{
 		Header: block.Header{
 			PrevHash:  types.Hash{},
@@ -180,13 +190,14 @@ func TestAddBlock_InvalidPrevHash(t *testing.T) {
 	_ = block.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
 	err := bs.AddBlock(block)
 
-	testutil.CheckError[blockchain.InvalidPrevHashError](t, err)
+	testutil.CheckError[InvalidPrevHashError](t, err)
 }
 
 func TestAddBlock_InvalidMerkleRootHash(t *testing.T) {
 	bs, _ := newBlockchainService(t, 1, 1)
+	_, publicKey := testutil.GenerateKeyPair(t)
+	genesisBlock := mineGenesisBlock(t, bs, publicKey)
 
-	genesisBlock := mineGenesisBlock(t, bs)
 	b := block.Block{
 		Header: block.Header{
 			PrevHash:  genesisBlock.Header.Hash(),
@@ -205,9 +216,11 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
+
+	genesis := mineGenesisBlock(t, bs, publicKey)
 	block := block.Block{
 		Header: block.Header{
-			PrevHash:  types.Hash{},
+			PrevHash:  genesis.Header.Hash(),
 			RootHash:  types.Hash{},
 			Timestamp: 0,
 		},
@@ -231,7 +244,9 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
-	block, err := bs.newBlock([]transaction.Transaction{}, publicKey)
+	genesis := mineGenesisBlock(t, bs, publicKey)
+
+	block, err := bs.newBlock([]transaction.Transaction{}, publicKey, 1, genesis.Header.Hash())
 
 	if err != nil {
 		t.Fatal(err)
@@ -258,35 +273,17 @@ func TestNewBlock_CoinbaseExisted(t *testing.T) {
 	}
 }
 
-func TestNewBlock_ValidPrevHash(t *testing.T) {
-	bs, _ := newBlockchainService(t, 1, 1)
-
-	_, publicKey := testutil.GenerateKeyPair(t)
-
-	genesisBlock := mineGenesisBlock(t, bs)
-	block, err := bs.newBlock([]transaction.Transaction{}, publicKey)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedHash := genesisBlock.Header.Hash()
-
-	if block.Header.PrevHash != expectedHash {
-		t.Fatalf("PrevHash не совпадает. Ожидалось: %v, получено: %v", expectedHash, block.Header.PrevHash)
-	}
-}
-
 func TestNewBlock_ValidRootHash(t *testing.T) {
 	bs, _ := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
+	genesis := mineGenesisBlock(t, bs, publicKey)
 	tx := transaction.Transaction{
 		Inputs:  []transaction.TxInput{{ID: utxo.ID{TxID: types.Hash{1}}}},
 		Outputs: []coin.TxOutput{{Amount: 3, Owner: publicKey}},
 	}
 
-	b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey)
+	b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey, 1, genesis.Header.Hash())
 
 	if err != nil {
 		t.Fatal(err)
@@ -312,10 +309,11 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 	bs, utxoRepo := newBlockchainService(t, 1, 1)
 
 	_, publicKey := testutil.GenerateKeyPair(t)
+	genesis := mineGenesisBlock(t, bs, publicKey)
 	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}}
 	block := block.Block{
 		Header: block.Header{
-			PrevHash:  types.Hash{},
+			PrevHash:  genesis.Header.Hash(),
 			RootHash:  types.Hash{},
 			Timestamp: 0,
 		},
@@ -357,17 +355,7 @@ func TestMineAndAddBlock_Success(t *testing.T) {
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	_, otherPublicKey := testutil.GenerateKeyPair(t)
 
-	genesisBlock, err := bs.newBlock([]transaction.Transaction{}, publicKey)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_ = genesisBlock.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
-
-	if err := bs.AddBlock(genesisBlock); err != nil {
-		t.Fatalf("ошибка при добавлении первого блока: %v", err)
-	}
+	genesisBlock := mineGenesisBlock(t, bs, publicKey)
 
 	genesisTxHash, err := genesisBlock.Transactions[0].Hash()
 
@@ -411,6 +399,7 @@ func TestAddBlock_DoubleSpendAcrossBlocks(t *testing.T) {
 
 	privateKey, publicKey := testutil.GenerateKeyPair(t)
 	_, otherPublicKey := testutil.GenerateKeyPair(t)
+	mineGenesisBlock(t, bs, otherPublicKey)
 	amount := uint64(5)
 	testutil.GenerateSingleUtxo(t, amount, publicKey, utxoRepo)
 
@@ -420,7 +409,6 @@ func TestAddBlock_DoubleSpendAcrossBlocks(t *testing.T) {
 			Outputs: []coin.TxOutput{{Amount: amount, Owner: owner}},
 		}
 		hash, err := tx.Hash()
-
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -429,15 +417,14 @@ func TestAddBlock_DoubleSpendAcrossBlocks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		b, err := bs.newBlock([]transaction.Transaction{tx}, publicKey)
-
+		job, err := bs.newJob([]transaction.Transaction{tx}, owner)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("new job: %v", err)
 		}
 
-		_ = b.Mine(t.Context(), bs.blockchain.CurrentDifficulty())
+		_ = job.candidate.Mine(t.Context(), job.difficulty)
 
-		return bs.AddBlock(b)
+		return bs.AddBlock(job.candidate)
 	}
 
 	if err := spend(publicKey); err != nil {

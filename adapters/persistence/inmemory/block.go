@@ -27,16 +27,16 @@ func NewBlock(utxoRepo *UTXO) *Block {
 	}
 }
 
-func (r *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
+func (r *Block) FindByHash(hash types.Hash) (block.Block, uint64, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	height, exists := r.heights[hash]
 	if !exists {
-		return block.Block{}, false, nil
+		return block.Block{}, 0, false, nil
 	}
 
-	return r.blocks[height], true, nil
+	return r.blocks[height], height, true, nil
 }
 
 func (r *Block) FindByHeight(height uint64) (block.Block, bool, error) {
@@ -94,7 +94,7 @@ func (r *Block) Save(b block.Block, height uint64) error {
 	for _, t := range b.Transactions {
 		hash, err := t.Hash()
 		if err != nil {
-			return err
+			return fmt.Errorf("hash transaction: %w", err)
 		}
 
 		for _, i := range t.Inputs {

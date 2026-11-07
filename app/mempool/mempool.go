@@ -2,6 +2,7 @@
 package mempool
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/baltikaa9/zxcoin/app/logger"
@@ -62,9 +63,8 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 	}
 
 	hash, err := transaction.Hash()
-
 	if err != nil {
-		return err
+		return fmt.Errorf("hash transaction: %w", err)
 	}
 
 	m.logger.Debug("adding transaction", "tx_id", hash.String())

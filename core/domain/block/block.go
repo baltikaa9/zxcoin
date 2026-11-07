@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/baltikaa9/zxcoin/core/domain/transaction"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
@@ -77,7 +78,6 @@ func (b Block) ValidateProofOfWork(difficulty uint64) error {
 
 func (b *Block) CalculateRootHash() error {
 	txHashes, err := b.getTxHashes()
-
 	if err != nil {
 		return err
 	}
@@ -106,9 +106,8 @@ func (b Block) getTxHashes() ([]types.Hash, error) {
 
 	for _, tx := range b.Transactions {
 		hash, err := tx.Hash()
-
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("hash transaction: %w", err)
 		}
 
 		txHashes = append(txHashes, hash)

@@ -78,7 +78,6 @@ func (w Wallet) CreateTransaction(to types.PublicKey, amount uint64) (transactio
 	}
 
 	hash, err := t.Hash()
-
 	if err != nil {
 		return transaction.Transaction{}, fmt.Errorf("hash transaction: %w", err)
 	}

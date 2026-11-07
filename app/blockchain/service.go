@@ -20,6 +20,12 @@ import (
 	"github.com/baltikaa9/zxcoin/core/domain/utxo"
 )
 
+type miningJob struct {
+	tipCtx     context.Context
+	candidate  block.Block
+	difficulty uint64
+}
+
 type Service struct {
 	mu         sync.RWMutex
 	tipCtx     context.Context
@@ -57,89 +63,90 @@ func (bs *Service) MineAndAddBlock(
 	creator types.PublicKey,
 ) (block.Block, error) {
 	bs.logger.Debug("mine and add block start")
-	txs := bs.mempool.GetPending(transactionLimit)
 
+	txs := bs.mempool.GetPending(transactionLimit)
 	if len(txs) == 0 {
 		return block.Block{}, errors.New("ожидающих транзакций не найдено")
 	}
 
-	bs.mu.RLock()
-	newBlock, err := bs.newBlock(txs, creator)
-	difficulty := bs.blockchain.CurrentDifficulty()
-	tipCtx := bs.tipCtx
-	bs.mu.RUnlock()
-
-	mineCtx, cancel := context.WithCancelCause(ctx)
-	defer cancel(nil)
-
-	stop := context.AfterFunc(tipCtx, func() {
-		cancel(context.Cause(tipCtx))
-	})
-	defer stop()
-
+	job, err := bs.newJob(txs, creator)
 	if err != nil {
 		return block.Block{}, fmt.Errorf("create block: %w", err)
 	}
 
-	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", difficulty)
+	mineCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	stop := context.AfterFunc(job.tipCtx, func() {
+		cancel(context.Cause(job.tipCtx))
+	})
+	defer stop()
+
+	bs.logger.Info("mining start", "tx_count", len(txs), "difficulty", job.difficulty)
 	start := time.Now()
 
-	if err := newBlock.Mine(mineCtx, difficulty); err != nil {
+	if err := job.candidate.Mine(mineCtx, job.difficulty); err != nil {
 		return block.Block{}, err
 	}
 
 	bs.logger.Info(
 		"mining finish",
-		"nonce", newBlock.Header.Nonce,
-		"hash", newBlock.Header.Hash().String(),
+		"nonce", job.candidate.Header.Nonce,
+		"hash", job.candidate.Header.Hash().String(),
 		"duration", time.Since(start),
 	)
 
-	if err := bs.AddBlock(newBlock); err != nil {
+	if err := bs.AddBlock(job.candidate); err != nil {
 		return block.Block{}, fmt.Errorf("add block: %w", err)
 	}
 
 	for _, tx := range txs {
 		hash, err := tx.Hash()
-
 		if err != nil {
-			return block.Block{}, err
+			return block.Block{}, fmt.Errorf("hash transaction: %w", err)
 		}
 
 		bs.mempool.Remove(hash)
 	}
 
-	return newBlock, nil
+	return job.candidate, nil
 }
 
-func (bs *Service) AddBlock(block block.Block) error {
+func (bs *Service) AddBlock(b block.Block) error {
 	bs.mu.Lock()
 	defer bs.mu.Unlock()
 
-	if err := block.ValidateProofOfWork(bs.blockchain.CurrentDifficulty()); err != nil {
+	tip, tipHeight, exists, err := bs.blockRepo.Tip()
+	if err != nil {
+		return fmt.Errorf("get tip: %w", err)
+	}
+	if !exists {
+		return EmptyBlockchainError{}
+	}
+
+	if b.Header.PrevHash != tip.Header.Hash() {
+		return InvalidPrevHashError{}
+	}
+
+	if err := b.ValidateProofOfWork(bs.blockchain.CurrentDifficulty()); err != nil {
 		return fmt.Errorf("validate PoW: %w", err)
 	}
 
-	if err := block.ValidateRootHash(); err != nil {
+	if err := b.ValidateRootHash(); err != nil {
 		return fmt.Errorf("validate root hash: %w", err)
 	}
 
-	if err := bs.verifyTransactions(block); err != nil {
+	if err := bs.verifyTransactions(b); err != nil {
 		return fmt.Errorf("verify transactions: %w", err)
 	}
 
-	if err := bs.blockchain.VerifyPrevHash(block); err != nil {
-		return fmt.Errorf("verify prev hash: %w", err)
-	}
-
-	if err := bs.applyBlock(block); err != nil {
+	if err := bs.applyBlock(b, tipHeight+1); err != nil {
 		return fmt.Errorf("apply block: %w", err)
 	}
 
-	bs.blockchain.AppendBlock(block)
 	bs.tipCancel(TipChangedError{})
 	bs.tipCtx, bs.tipCancel = context.WithCancelCause(context.Background())
-	bs.logger.Info("block added", "hash", block.Header.Hash().String())
+	bs.logger.Info("block added", "hash", b.Header.Hash().String())
 
 	return nil
 }
@@ -147,26 +154,27 @@ func (bs *Service) AddBlock(block block.Block) error {
 func (bs *Service) newBlock(
 	transactions []transaction.Transaction,
 	creator types.PublicKey,
+	height uint64,
+	prevHash types.Hash,
 ) (block.Block, error) {
 	bs.logger.Debug("creating block", "creator", creator.Short())
+
 	coinbaseTransaction := transaction.Transaction{
-		CoinbaseHeight: bs.blockchain.NextHeight(),
+		CoinbaseHeight: height,
 		Outputs:        []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: creator}},
 	}
 	bs.logger.Debug("coinbase transaction created", "amount", bs.blockchain.CurrentAward(), "owner", creator.Short())
 
 	newBlock := block.Block{
 		Header: block.Header{
-			PrevHash:  bs.blockchain.LastHash(),
+			PrevHash:  prevHash,
 			Nonce:     0,
 			Timestamp: uint32(time.Now().Unix()),
 		},
 		Transactions: append(transactions, coinbaseTransaction),
 	}
 
-	err := newBlock.CalculateRootHash()
-
-	if err != nil {
+	if err := newBlock.CalculateRootHash(); err != nil {
 		return block.Block{}, err
 	}
 
@@ -179,23 +187,24 @@ func (bs *Service) newBlock(
 	return newBlock, nil
 }
 
-func (bs *Service) applyBlock(block block.Block) error {
-	bs.logger.Debug("applying block", "hash", block.Header.Hash().String())
+func (bs *Service) applyBlock(b block.Block, height uint64) error {
+	hashStr := b.Header.Hash().String()
+	bs.logger.Debug("applying block", "hash", hashStr)
 
-	if err := bs.blockRepo.Save(block, bs.blockchain.NextHeight()); err != nil {
+	if err := bs.blockRepo.Save(b, height); err != nil {
 		return err
 	}
 
-	bs.logger.Debug("block applied", "hash", block.Header.Hash().String())
+	bs.logger.Debug("block applied", "hash", hashStr)
 
 	return nil
 }
 
-func (bs *Service) verifyTransactions(block block.Block) error {
+func (bs *Service) verifyTransactions(b block.Block) error {
 	spentInThisBlock := make(map[utxo.ID]struct{})
 	foundCoinbase := false
 
-	for _, transaction := range block.Transactions {
+	for _, transaction := range b.Transactions {
 		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == bs.blockchain.CurrentAward() {
 			if foundCoinbase {
 				return MoreOneCoinbaseError{}
@@ -219,4 +228,30 @@ func (bs *Service) verifyTransactions(block block.Block) error {
 	}
 
 	return nil
+}
+
+func (bs *Service) newJob(
+	txs []transaction.Transaction,
+	creator types.PublicKey,
+) (miningJob, error) {
+	bs.mu.RLock()
+	defer bs.mu.RUnlock()
+
+	tip, tipHeight, exists, err := bs.blockRepo.Tip()
+	if err != nil {
+		return miningJob{}, fmt.Errorf("get tip: %w", err)
+	}
+	if !exists {
+		return miningJob{}, EmptyBlockchainError{}
+	}
+	newBlock, err := bs.newBlock(txs, creator, tipHeight+1, tip.Header.Hash())
+	if err != nil {
+		return miningJob{}, err
+	}
+
+	return miningJob{
+		tipCtx:     bs.tipCtx,
+		candidate:  newBlock,
+		difficulty: bs.blockchain.CurrentDifficulty(),
+	}, nil
 }

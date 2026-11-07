@@ -26,3 +26,15 @@ type TipChangedError struct{}
 func (e TipChangedError) Error() string {
 	return "во время майнинга добавлен новый блок"
 }
+
+type InvalidPrevHashError struct{}
+
+func (e InvalidPrevHashError) Error() string {
+	return "неверный предыдущий блок"
+}
+
+type EmptyBlockchainError struct{}
+
+func (e EmptyBlockchainError) Error() string {
+	return "блокчейн пуст, необходим генезис-блок"
+}

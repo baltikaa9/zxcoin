@@ -68,11 +68,9 @@ func run(lg applogger.Logger) error {
 		return fmt.Errorf("create genesis: %w", err)
 	}
 
-	if err := blockRepo.Save(genesis, bc.NextHeight()); err != nil {
+	if err := blockRepo.Save(genesis, 0); err != nil {
 		return fmt.Errorf("save genesis: %w", err)
 	}
-
-	bc.AppendBlock(genesis)
 
 	fmt.Println("было")
 

@@ -56,9 +56,8 @@ func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa
 		Outputs: outputs,
 	}
 	hash, err := t.Hash()
-
 	if err != nil {
-		return Transaction{}, err
+		return Transaction{}, fmt.Errorf("hash transaction: %w", err)
 	}
 
 	for i := range t.Inputs {
@@ -72,9 +71,8 @@ func NewTransaction(inputs []TxInput, outputs []coin.TxOutput, privateKey *ecdsa
 
 func (t Transaction) Hash() (types.Hash, error) {
 	data, err := t.serialize()
-
 	if err != nil {
-		return types.Hash{}, err
+		return types.Hash{}, fmt.Errorf("serialize transaction: %w", err)
 	}
 
 	return sha256.Sum256(data), nil
@@ -105,9 +103,8 @@ func (in *TxInput) Verify(publicKey types.PublicKey, hash types.Hash) bool {
 
 func (t Transaction) ValidateOutputs() error {
 	hash, err := t.Hash()
-
 	if err != nil {
-		return err
+		return fmt.Errorf("hash transaction: %w", err)
 	}
 
 	if len(t.Outputs) == 0 {
@@ -125,9 +122,8 @@ func (t Transaction) ValidateOutputs() error {
 
 func (t Transaction) VerifySignatures(spent []utxo.UTXO) error {
 	hash, err := t.Hash()
-
 	if err != nil {
-		return err
+		return fmt.Errorf("hash transaction: %w", err)
 	}
 
 	emptySignature := Signature{}
@@ -184,11 +180,11 @@ func (t Transaction) serialize() ([]byte, error) {
 
 	buf = binary.BigEndian.AppendUint32(buf, uint32(len(t.Outputs)))
 
-	for _, output := range t.Outputs {
+	for i, output := range t.Outputs {
 		data, err := output.Serialize()
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("serialize output %d: %w", i, err)
 		}
 
 		buf = append(buf, data...)

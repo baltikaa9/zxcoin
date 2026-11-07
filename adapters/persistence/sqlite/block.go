@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	appblock "github.com/baltikaa9/zxcoin/app/block"
 	"github.com/baltikaa9/zxcoin/core/domain/block"
@@ -25,21 +26,19 @@ func NewBlock(db *sql.DB) *Block {
 	return &Block{db: db}
 }
 
-func (br *Block) FindByHash(hash types.Hash) (block.Block, bool, error) {
+func (br *Block) FindByHash(hash types.Hash) (block.Block, uint64, bool, error) {
 	tx, err := br.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return block.Block{}, false, err
+		return block.Block{}, 0, false, err
 	}
 
 	defer func() { _ = tx.Rollback() }()
 
-	b, _, exists, err := queryBlock(
+	return queryBlock(
 		tx,
 		`SELECT `+blockColumns+` FROM blocks WHERE hash = ?`,
 		hash[:],
 	)
-
-	return b, exists, err
 }
 
 func (br *Block) FindByHeight(height uint64) (block.Block, bool, error) {
@@ -114,7 +113,7 @@ func (br *Block) Save(b block.Block, height uint64) error {
 	for i, t := range b.Transactions {
 		hash, err := t.Hash()
 		if err != nil {
-			return err
+			return fmt.Errorf("hash transaction: %w", err)
 		}
 
 		if _, err := tx.Exec(
