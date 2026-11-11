@@ -16,11 +16,7 @@ import (
 	apptransaction "github.com/baltikaa9/zxcoin/app/transaction"
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/app/wallet"
-	"github.com/baltikaa9/zxcoin/core/domain/block"
 	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
-	"github.com/baltikaa9/zxcoin/core/domain/coin"
-	"github.com/baltikaa9/zxcoin/core/domain/transaction"
-	"github.com/baltikaa9/zxcoin/core/domain/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -57,20 +53,19 @@ func run(lg applogger.Logger) error {
 	tracker := wallet.NewReservationTracker()
 	validator := apptransaction.NewValidator(utxoRepo)
 	mp := mempool.NewMempool(validator, lg)
-	bc := blockchain.NewBlockchain(4, 42)
+	bc := blockchain.NewBlockchain(2, 42)
 	bs := appblockchain.NewService(bc, blockRepo, validator, mp, lg)
 
-	myWallet := wallet.NewWallet(tracker, utxoRepo, lg)
-	otherWallet := wallet.NewWallet(tracker, utxoRepo, lg)
-
-	genesis, err := newGenesis(myWallet.PublicKey, 5, 3, 11, 10)
+	myKey, err := wallet.LoadPrivateKey("wallet.key.test")
 	if err != nil {
-		return fmt.Errorf("create genesis: %w", err)
+		return fmt.Errorf("load key: %w", err)
 	}
-
-	if err := blockRepo.Save(genesis, 0); err != nil {
-		return fmt.Errorf("save genesis: %w", err)
+	otherKey, err := wallet.LoadPrivateKey("other.key.test")
+	if err != nil {
+		return fmt.Errorf("load key: %w", err)
 	}
+	myWallet := wallet.LoadWallet(myKey, tracker, utxoRepo, lg)
+	otherWallet := wallet.LoadWallet(otherKey, tracker, utxoRepo, lg)
 
 	fmt.Println("было")
 
@@ -128,24 +123,6 @@ func openDB() (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-func newGenesis(owner types.PublicKey, amounts ...uint64) (block.Block, error) {
-	outputs := make([]coin.TxOutput, 0, len(amounts))
-
-	for _, amount := range amounts {
-		outputs = append(outputs, coin.TxOutput{Amount: amount, Owner: owner})
-	}
-
-	genesis := block.Block{
-		Transactions: []transaction.Transaction{{Outputs: outputs}},
-	}
-
-	if err := genesis.CalculateRootHash(); err != nil {
-		return block.Block{}, err
-	}
-
-	return genesis, nil
 }
 
 func printBalances(repo apputxo.Repository, my, other wallet.Wallet) error {
