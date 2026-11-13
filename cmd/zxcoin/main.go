@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	adapterlogger "github.com/baltikaa9/zxcoin/adapters/logger"
 	"github.com/baltikaa9/zxcoin/adapters/persistence/sqlite"
@@ -17,6 +15,7 @@ import (
 	apputxo "github.com/baltikaa9/zxcoin/app/utxo"
 	"github.com/baltikaa9/zxcoin/app/wallet"
 	"github.com/baltikaa9/zxcoin/core/domain/blockchain"
+	"github.com/baltikaa9/zxcoin/core/testutil"
 	_ "modernc.org/sqlite"
 )
 
@@ -41,7 +40,7 @@ func main() {
 func run(lg applogger.Logger) error {
 	lg.Info("started")
 
-	db, err := openDB()
+	db, err := testutil.OpenTestSQLiteDB("migrations/*.up.sql")
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
@@ -89,40 +88,6 @@ func run(lg applogger.Logger) error {
 	fmt.Println("стало")
 
 	return printBalances(utxoRepo, myWallet, otherWallet)
-}
-
-func openDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "file::memory:?_pragma=foreign_keys(1)")
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Каждое соединение с :memory: получает свою пустую базу.
-	db.SetMaxOpenConns(1)
-
-	migrations, err := filepath.Glob("migrations/*.up.sql")
-
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	for _, path := range migrations {
-		migration, err := os.ReadFile(path)
-
-		if err != nil {
-			db.Close()
-			return nil, err
-		}
-
-		if _, err := db.Exec(string(migration)); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-	}
-
-	return db, nil
 }
 
 func printBalances(repo apputxo.Repository, my, other wallet.Wallet) error {

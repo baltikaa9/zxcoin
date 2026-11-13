@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/baltikaa9/zxcoin/adapters/persistence"
 	appblock "github.com/baltikaa9/zxcoin/app/block"
 	"github.com/baltikaa9/zxcoin/core/domain/block"
 	"github.com/baltikaa9/zxcoin/core/domain/types"
@@ -85,7 +86,7 @@ func (r *Block) Save(b block.Block, height uint64) error {
 	defer r.mu.Unlock()
 
 	if height != uint64(len(r.blocks)) {
-		return fmt.Errorf("invalid block height: got %d, want %d", height, len(r.blocks))
+		return persistence.InvalidHeightError{Got: height, Want: uint64(len(r.blocks))}
 	}
 
 	inputs := make([]utxo.ID, 0)

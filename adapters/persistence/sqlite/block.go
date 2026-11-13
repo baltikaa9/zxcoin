@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/baltikaa9/zxcoin/adapters/persistence"
 	appblock "github.com/baltikaa9/zxcoin/app/block"
 	"github.com/baltikaa9/zxcoin/core/domain/block"
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -101,6 +102,16 @@ func (br *Block) Save(b block.Block, height uint64) error {
 	blockHash := b.Header.Hash()
 	prevHash := b.Header.PrevHash
 	rootHash := b.Header.RootHash
+
+	var lastHeight uint64
+
+	if err := tx.QueryRow(`SELECT max(height) AS height FROM blocks`).Scan(&lastHeight); err != nil {
+		return err
+	}
+
+	if height != lastHeight+1 {
+		return persistence.InvalidHeightError{Got: height, Want: lastHeight + 1}
+	}
 
 	if _, err := tx.Exec(
 		`INSERT INTO blocks (hash, `+blockColumns+`)

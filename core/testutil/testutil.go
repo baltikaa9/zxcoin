@@ -5,7 +5,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"database/sql"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/baltikaa9/zxcoin/core/domain/coin"
@@ -54,4 +58,38 @@ func CheckError[E error](t *testing.T, err error) {
 	}
 
 	t.Fatalf("ожидался тип ошибки %T, получен %T: %v", *new(E), actual, err)
+}
+
+func OpenTestSQLiteDB(migrationsPath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", "file::memory:?_pragma=foreign_keys(1)")
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Каждое соединение с :memory: получает свою пустую базу.
+	db.SetMaxOpenConns(1)
+
+	migrations, err := filepath.Glob(migrationsPath)
+
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	for _, path := range migrations {
+		migration, err := os.ReadFile(path)
+
+		if err != nil {
+			db.Close()
+			return nil, err
+		}
+
+		if _, err := db.Exec(string(migration)); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+	}
+
+	return db, nil
 }
