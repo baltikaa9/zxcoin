@@ -219,9 +219,9 @@ func (bs *Service) verifyTransactions(b block.Block, coinbaseHeight uint64) erro
 
 				foundCoinbase = true
 				continue
-			} else {
-				return errors.New("некорректная coinbase-транзакция: ожидаются отсутствие входов, один выход и сумма, равная награде за блок")
 			}
+
+			return errors.New("некорректная coinbase-транзакция: ожидаются отсутствие входов, один выход и сумма, равная награде за блок")
 		}
 
 		if err := bs.validator.Validate(transaction); err != nil {
