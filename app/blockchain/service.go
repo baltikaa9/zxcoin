@@ -136,7 +136,7 @@ func (bs *Service) AddBlock(b block.Block) error {
 		return fmt.Errorf("validate root hash: %w", err)
 	}
 
-	if err := bs.verifyTransactions(b); err != nil {
+	if err := bs.verifyTransactions(b, tipHeight+1); err != nil {
 		return fmt.Errorf("verify transactions: %w", err)
 	}
 
@@ -200,18 +200,28 @@ func (bs *Service) applyBlock(b block.Block, height uint64) error {
 	return nil
 }
 
-func (bs *Service) verifyTransactions(b block.Block) error {
+func (bs *Service) verifyTransactions(b block.Block, coinbaseHeight uint64) error {
 	spentInThisBlock := make(map[utxo.ID]struct{})
 	foundCoinbase := false
 
 	for _, transaction := range b.Transactions {
-		if len(transaction.Inputs) == 0 && len(transaction.Outputs) == 1 && transaction.Outputs[0].Amount == bs.blockchain.CurrentAward() {
-			if foundCoinbase {
-				return MoreOneCoinbaseError{}
-			}
+		if transaction.CoinbaseHeight != 0 {
+			if len(transaction.Inputs) == 0 &&
+				len(transaction.Outputs) == 1 &&
+				transaction.Outputs[0].Amount == bs.blockchain.CurrentAward() {
+				if foundCoinbase {
+					return MoreOneCoinbaseError{}
+				}
 
-			foundCoinbase = true
-			continue
+				if transaction.CoinbaseHeight != coinbaseHeight {
+					return fmt.Errorf("coinbase_height error; got %v, want %v", transaction.CoinbaseHeight, coinbaseHeight)
+				}
+
+				foundCoinbase = true
+				continue
+			} else {
+				return errors.New("некорректная coinbase-транзакция: ожидаются отсутствие входов, один выход и сумма, равная награде за блок")
+			}
 		}
 
 		if err := bs.validator.Validate(transaction); err != nil {
@@ -225,6 +235,10 @@ func (bs *Service) verifyTransactions(b block.Block) error {
 
 			spentInThisBlock[input.ID] = struct{}{}
 		}
+	}
+
+	if !foundCoinbase {
+		return errors.New("отсутствует coinbase-транзакция")
 	}
 
 	return nil
