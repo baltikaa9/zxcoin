@@ -225,8 +225,8 @@ func TestAddBlock_MoreOneCoinbase(t *testing.T) {
 			Timestamp: 0,
 		},
 		Transactions: []transaction.Transaction{
-			{Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}},
-			{Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}},
+			{CoinbaseHeight: 1, Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}},
+			{CoinbaseHeight: 1, Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}},
 		},
 	}
 
@@ -310,7 +310,10 @@ func TestAddBlock_CoinbaseExisted(t *testing.T) {
 
 	_, publicKey := testutil.GenerateKeyPair(t)
 	genesis := mineGenesisBlock(t, bs, publicKey)
-	tx := transaction.Transaction{Outputs: []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}}}
+	tx := transaction.Transaction{
+		CoinbaseHeight: 1,
+		Outputs:        []coin.TxOutput{{Amount: bs.blockchain.CurrentAward(), Owner: publicKey}},
+	}
 	block := block.Block{
 		Header: block.Header{
 			PrevHash:  genesis.Header.Hash(),
