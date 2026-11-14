@@ -15,7 +15,7 @@ import (
 type Mempool struct {
 	mu           sync.RWMutex
 	transactions map[types.Hash]transaction.Transaction
-	inputs       map[utxo.ID]struct{}
+	inputs       map[utxo.ID]types.Hash
 	validator    *apptransaction.Validator
 	logger       logger.Logger
 }
@@ -23,7 +23,7 @@ type Mempool struct {
 func NewMempool(validator *apptransaction.Validator, logger logger.Logger) *Mempool {
 	return &Mempool{
 		transactions: make(map[types.Hash]transaction.Transaction),
-		inputs:       make(map[utxo.ID]struct{}),
+		inputs:       make(map[utxo.ID]types.Hash),
 		validator:    validator,
 		logger:       logger.Named("mempool"),
 	}
@@ -71,7 +71,7 @@ func (m *Mempool) Add(transaction transaction.Transaction) error {
 	m.transactions[hash] = transaction
 
 	for _, input := range transaction.Inputs {
-		m.inputs[input.ID] = struct{}{}
+		m.inputs[input.ID] = hash
 	}
 
 	m.logger.Info("transaction added", "tx_id", hash.String())
@@ -83,10 +83,28 @@ func (m *Mempool) Remove(hash types.Hash) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	tx, ok := m.transactions[hash]
+	if m.remove(hash) {
+		m.logger.Debug("removed transaction", "tx_id", hash.String())
+	}
+}
 
+func (m *Mempool) RemoveByInput(id utxo.ID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	txHash, ok := m.inputs[id]
 	if !ok {
 		return
+	}
+
+	m.remove(txHash)
+	m.logger.Debug("removed transaction by input", "tx_id", txHash.String(), "input_tx_id", id.TxID.String(), "out_index", id.OutIndex)
+}
+
+func (m *Mempool) remove(hash types.Hash) bool {
+	tx, ok := m.transactions[hash]
+	if !ok {
+		return false
 	}
 
 	for _, input := range tx.Inputs {
@@ -94,5 +112,6 @@ func (m *Mempool) Remove(hash types.Hash) {
 	}
 
 	delete(m.transactions, hash)
-	m.logger.Debug("removed transaction", "tx_id", hash.String())
+
+	return true
 }

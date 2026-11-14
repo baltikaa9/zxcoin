@@ -100,15 +100,6 @@ func (bs *Service) MineAndAddBlock(
 		return block.Block{}, fmt.Errorf("add block: %w", err)
 	}
 
-	for _, tx := range txs {
-		hash, err := tx.Hash()
-		if err != nil {
-			return block.Block{}, fmt.Errorf("hash transaction: %w", err)
-		}
-
-		bs.mempool.Remove(hash)
-	}
-
 	return job.candidate, nil
 }
 
@@ -142,6 +133,19 @@ func (bs *Service) AddBlock(b block.Block) error {
 
 	if err := bs.applyBlock(b, tipHeight+1); err != nil {
 		return fmt.Errorf("apply block: %w", err)
+	}
+
+	for _, tx := range b.Transactions {
+		hash, err := tx.Hash()
+		if err != nil {
+			return fmt.Errorf("hash transaction: %w", err)
+		}
+
+		bs.mempool.Remove(hash)
+
+		for _, input := range tx.Inputs {
+			bs.mempool.RemoveByInput(input.ID)
+		}
 	}
 
 	bs.tipCancel(TipChangedError{})
